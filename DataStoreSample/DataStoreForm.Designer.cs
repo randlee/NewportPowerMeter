@@ -1,6 +1,6 @@
 namespace DataStoreSample
 {
-    partial class frmMain
+    partial class DataStoreForm
     {
         /// <summary>
         /// Required designer variable.
@@ -103,7 +103,7 @@ namespace DataStoreSample
             this.txtTime.TabIndex = 16;
             this.txtTime.TabStop = false;
             // 
-            // frmMain
+            // DataStoreForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF (6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -117,7 +117,7 @@ namespace DataStoreSample
             this.Controls.Add (this.lblSampleSize);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
-            this.Name = "frmMain";
+            this.Name = "DataStoreForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Data Store Sample Application";
             this.ResumeLayout (false);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using Newport.USBComm;
 
@@ -72,6 +73,11 @@ namespace Newport.Usb
                     _deviceKey = item as string;
                     if (!string.IsNullOrEmpty(_deviceKey)) break;
                 }
+                string response;
+                int status;
+                while(TryRead(out response, out status))
+                {
+                }
             }
 #endif
             return open;
@@ -89,8 +95,7 @@ namespace Newport.Usb
         /// This method sends the specified command to the communication port and 
         /// then displays the write status.
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+        /// <param name="command">Command to send to power meter</param>
         public string Write(string command)
         {
             try
@@ -98,6 +103,7 @@ namespace Newport.Usb
                 var nIOStatus = USB.m_knUSBAddrNotFound;
                 if (USB != null)
                 {
+                    Debug.WriteLine(command);
                     if (_deviceID > 0) nIOStatus = USB.Write(_deviceID, command);
                     else if (!string.IsNullOrEmpty(_deviceKey)) nIOStatus = USB.Write(_deviceKey, command);
                 }
@@ -114,23 +120,27 @@ namespace Newport.Usb
         /// This method reads data from the communication port and then 
         /// displays the response and read status.
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         public string Read()
         {
             try
             {
-                // The firmware limits the transfer size to the maximum packet size of 64 bytes
-                var sbResponse = new StringBuilder(64);
-
                 var nIOStatus = USB.m_knUSBAddrNotFound;
                 if (USB != null)
                 {
+                    // The firmware limits the transfer size to the maximum packet size of 64 bytes
+                    var sbResponse = new StringBuilder(64);
                     if (_deviceID > 0) nIOStatus = USB.Read(_deviceID, sbResponse);
                     else if (!string.IsNullOrEmpty(_deviceKey)) nIOStatus = USB.Read(_deviceKey, sbResponse);
+
+                    if (nIOStatus == 0)
+                    {
+                        var response = sbResponse.ToString();
+                        Debug.WriteLine($"[{response.Length}] '{response}'");
+                        return response;
+                    }
                 }
 
-                return nIOStatus == 0 ? sbResponse.ToString() : $"Error Code = {nIOStatus}, 0x{nIOStatus.ToString("X")}";
+                return $"Error Code = {nIOStatus}, 0x{nIOStatus.ToString("X")}";
             }
             catch (Exception ex)
             {
@@ -138,6 +148,60 @@ namespace Newport.Usb
             }
         }
 
+        public bool TryRead(out string response, out int ioStatus)
+        {
+            ioStatus = USB.m_knUSBAddrNotFound;
+            try
+            {
+                // The firmware limits the transfer size to the maximum packet size of 64 bytes
+                var sbResponse = new StringBuilder(64);
+                if (USB != null)
+                {
+                    if (_deviceID > 0) ioStatus = USB.Read(_deviceID, sbResponse);
+                    else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = USB.Read(_deviceKey, sbResponse);
+                }
+                if (ioStatus == 0)
+                {
+                    response = sbResponse.ToString();
+                    Debug.WriteLine($"[{response.Length}] '{response}'");
+                    return true;
+                }
+                response = $"Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}";
+            }
+            catch (Exception ex)
+            {
+                response = $"Could not read the command response.\r\n{ex.Message}";
+            }
+            Debug.WriteLine(response);
+            return false;
+        }
+        public bool TryReadBinary(out string response, out int ioStatus)
+        {
+            ioStatus = USB.m_knUSBAddrNotFound;
+            try
+            {
+                // The firmware limits the transfer size to the maximum packet size of 64 bytes
+                var sbResponse = new StringBuilder(64);
+                if (USB != null)
+                {
+                    if (_deviceID > 0) ioStatus = USB.ReadBinary(_deviceID, sbResponse);
+                    else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = USB.ReadBinary(_deviceKey, sbResponse);
+                }
+                if (ioStatus == 0)
+                {
+                    response = sbResponse.ToString();
+                    Debug.WriteLine($"[{response.Length}] '{response}'");
+                    return true;
+                }
+                response = $"Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}";
+            }
+            catch (Exception ex)
+            {
+                response = $"Could not read the command response.\r\n{ex.Message}";
+            }
+            Debug.WriteLine(response);
+            return false;
+        }
         private int DisplayDeviceTable()
         {
             var hashTable = USB.GetDeviceTable();
