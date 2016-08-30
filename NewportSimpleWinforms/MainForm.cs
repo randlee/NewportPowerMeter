@@ -1,8 +1,6 @@
 using System;
-using System.Diagnostics;
-using System.Text;
 using System.Windows.Forms;
-using Newport.USBComm;
+using Newport.Usb;
 
 namespace Visyn.Newport
 {

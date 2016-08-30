@@ -1,4 +1,4 @@
-﻿namespace Visyn.Newport
+﻿namespace Newport.Usb
 {
     public static class NewportScpiCommands
     {

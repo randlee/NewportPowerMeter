@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using Newport.USBComm;
 
-namespace Visyn.Newport
+namespace Newport.Usb
 {
     public class NewportUsbPowerMeter
     {
