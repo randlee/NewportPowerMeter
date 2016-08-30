@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Windows.Forms;
 
-namespace CSharpSample
+namespace Visyn.Newport
 {
     static class Program
     {
@@ -23,7 +22,7 @@ namespace CSharpSample
         {
             Application.EnableVisualStyles ();
             Application.SetCompatibleTextRenderingDefault (false);
-            Application.Run (new frmMain ());
+            Application.Run (new MainForm ());
         }
     }
 }

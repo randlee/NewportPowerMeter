@@ -2,15 +2,14 @@ using System;
 using System.Diagnostics;
 using System.Text;
 using System.Windows.Forms;
-
 using Newport.USBComm;
 
-namespace CSharpSample
+namespace Visyn.Newport
 {
     /// <summary>
     /// This class defines the main form for the C# Sample Application.
     /// </summary>
-    public partial class frmMain : Form
+    public partial class MainForm : Form
     {
         /// <summary>
         /// The USB communication object.
@@ -27,7 +26,7 @@ namespace CSharpSample
         /// <summary>
         /// Constructor.
         /// </summary>
-        public frmMain ()
+        public MainForm ()
         {
             InitializeComponent ();
             OnConnected (false);
