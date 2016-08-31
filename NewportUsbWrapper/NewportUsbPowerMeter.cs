@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
 using Newport.USBComm;
 
@@ -22,6 +21,9 @@ namespace Newport.Usb
         /// DeviceKey used to communicate with Newport device
         /// </summary>
         private string _deviceKey = null;
+
+        public const string END_OF_HEADER = "End of Header\r\n";
+        public const string END_OF_DATA = "End of Data\r\n";
 
         public NewportUsbPowerMeter()
         {
@@ -73,15 +75,13 @@ namespace Newport.Usb
                     _deviceKey = item as string;
                     if (!string.IsNullOrEmpty(_deviceKey)) break;
                 }
-                string response;
-                int status;
-                while(TryRead(out response, out status))
-                {
-                }
+                Flush();
             }
 #endif
             return open;
         }
+
+
 
         public void Disconnect()
         {
@@ -89,6 +89,16 @@ namespace Newport.Usb
             USB?.CloseDevices();
             _deviceID = -1;
             _deviceKey = null;
+        }
+
+        public void Flush()
+        {
+            if (USB == null) return;
+            string response;
+            int status;
+            while (TryRead(out response, out status))
+            {
+            }
         }
 
         /// <summary>
@@ -186,6 +196,40 @@ namespace Newport.Usb
                 {
                     if (_deviceID > 0) ioStatus = USB.ReadBinary(_deviceID, sbResponse);
                     else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = USB.ReadBinary(_deviceKey, sbResponse);
+                }
+                if (ioStatus == 0)
+                {
+                    response = sbResponse.ToString();
+                    Debug.WriteLine($"[{response.Length}] '{response}'");
+                    return true;
+                }
+                response = $"Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}";
+            }
+            catch (Exception ex)
+            {
+                response = $"Could not read the command response.\r\n{ex.Message}";
+            }
+            Debug.WriteLine(response);
+            return false;
+        }
+
+        public bool ReadBinaryUntil(string match, out string response, out int ioStatus)
+        {
+            ioStatus = USB.m_knUSBAddrNotFound;
+            try
+            {
+                // The firmware limits the transfer size to the maximum packet size of 64 bytes
+                var sbResponse = new StringBuilder(1024);
+                if (USB != null)
+                {
+                    ioStatus = 0;
+                    while (ioStatus == 0 && !sbResponse.ToString().Contains(match))
+                    {
+                        var sbTemp = new StringBuilder(64);
+                        if (_deviceID > 0) ioStatus = USB.ReadBinary(_deviceID, sbTemp);
+                        else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = USB.ReadBinary(_deviceKey, sbTemp);
+                        sbResponse.Append(sbTemp);
+                    }
                 }
                 if (ioStatus == 0)
                 {

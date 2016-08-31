@@ -1,6 +1,9 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -105,13 +108,10 @@ namespace DataStoreSample
                 var nSampleSize = GetSampleSize();
 
                 // If the sample size is not valid
-                if (nSampleSize <= 0)
-                {
-                    return;
-                }
+                if (nSampleSize <= 0) { return; }
 
                 var sbCmd = new StringBuilder();
-                var sbResponse = new StringBuilder();
+//                var sbResponse = new StringBuilder();
                 var nSamples = 0;
                 rtbResponse.Text = string.Empty;
 
@@ -135,6 +135,7 @@ namespace DataStoreSample
 
                 if (string.IsNullOrEmpty(status))
                 {
+                    _newport.Flush();
                     status = _newport.Write("pm:ds:enable 1\r");
                 }
 
@@ -146,8 +147,16 @@ namespace DataStoreSample
 
                 if (string.IsNullOrEmpty(status))
                 {
-                    int ioStatus = GetDataStoreValues(nSamples);
-                    if (ioStatus != 0) rtbResponse.Text += $"\rStatus = {ioStatus}";
+                    List<double> data;
+                    var ioStatus = GetDataStoreValues(nSamples, out data);
+                    if (ioStatus == 0)
+                    {
+                        rtbResponse.Text = $"Count={data.Count} Min={data.Min()} Max={data.Max()}";
+                    }
+                    else
+                    {
+                        rtbResponse.Text += $"\rStatus = {ioStatus}";
+                    }
                 }
 
                 if (!string.IsNullOrEmpty(status))
@@ -222,6 +231,7 @@ namespace DataStoreSample
             while (nStatus == 0)
             {
                 Thread.Sleep(1000);
+                
                 // Query the sample count
                 var writeResponse = _newport.Write("pm:ds:count?\r");
 
@@ -256,9 +266,10 @@ namespace DataStoreSample
         /// </summary>
         /// <param name="sampleCount"></param>
         /// <returns>The I/O status.</returns>
-        private int GetDataStoreValues(int sampleCount)
+        private int GetDataStoreValues(int sampleCount, out List<double> data)
         {
             StreamWriter writer = null;
+            data = new List<double>(sampleCount);
             int status = -1;
             try
             {
@@ -266,52 +277,47 @@ namespace DataStoreSample
                 var startTime = DateTime.Now;
                 var sbWriteBuf = new StringBuilder(5120);
                 var nIdx = -1;
-                using (writer = new StreamWriter("DataStore.txt", false))
+                string response;
+                if (_newport.ReadBinaryUntil(NewportUsbPowerMeter.END_OF_HEADER, out response, out status))
                 {
-                    rtbResponse.Text = "See DataStore.txt for the results.";
-                    var strEndOfData = "End of Data\r\n";
-                    var sbCompareBuf = new StringBuilder();
-                    var sbResponse = new StringBuilder();
+                    int markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_HEADER) + NewportUsbPowerMeter.END_OF_HEADER.Length;
 
-                    sbWriteBuf.AppendFormat("{0}\r\n", sampleCount);
-
-                    while (string.IsNullOrEmpty(writeResponse) && nIdx <= 0)
+                    string bufferData = response.Substring(markerIndex);
+                    if (_newport.ReadBinaryUntil(NewportUsbPowerMeter.END_OF_DATA, out response, out status))
                     {
-                        // Set the compare buffer to the previous response data
-                        sbCompareBuf.Remove(0, sbCompareBuf.Length);
-                        sbCompareBuf.Append(sbResponse);
-
-                        // Read the response data
-                        sbResponse.Remove(0, sbResponse.Length);
-                        sbResponse.Capacity = m_kMaxXferLen;
-                        string response;
-                        bool success = _newport.TryReadBinary(out response, out status);
-
-                        if (success)
+                        markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_DATA);
+                        bufferData += response.Substring(0, markerIndex);
+                        using (writer = new StreamWriter("DataStore.txt", false))
                         {
-                            // Append the current response data to the compare buffer
-                            sbCompareBuf.Append(response);
-                            nIdx = sbCompareBuf.ToString().IndexOf(strEndOfData);
+                            rtbResponse.Text = "See DataStore.txt for the results.";
+                            //var strEndOfData = "End of Data\r\n";
+                            //var sbCompareBuf = new StringBuilder();
+                            //var sbResponse = new StringBuilder();
 
-                            sbWriteBuf.Append(sbResponse);
+                            sbWriteBuf.AppendFormat("{0}\r\n", sampleCount);
+                            sbWriteBuf.Append(bufferData);
+                            writer.Write(sbWriteBuf.ToString());
 
-                            if (sbWriteBuf.Length > 5000)
+                            var split = bufferData.Split(new[] { "\r\n" } ,StringSplitOptions.RemoveEmptyEntries);
+                            if(split.Length != sampleCount)
                             {
-                                // Write to the output file
-                                writer.Write(sbWriteBuf.ToString());
-                                sbWriteBuf.Remove(0, sbWriteBuf.Length);
-
-                                // Update the elapsed time
-                                UpdateDSGetTime(startTime);
+                                Debug.WriteLine($"Retrieved count {split.Length} != sample count {sampleCount}");
                             }
-                        }
-                        else
-                        {
-                            break;
+                            else
+                            {
+                                foreach(var str in split)
+                                {
+                                    int result;
+                                    if(int.TryParse(str,out result))
+                                    {
+                                        data.Add(result);
+                                    }
+                                }
+                            }
+                            
+                            writer.Write(sbWriteBuf.ToString());
                         }
                     }
-                    // Write to the output file
-                    writer.Write(sbWriteBuf.ToString());
                 }
                 // Update the elapsed time
                 UpdateDSGetTime(startTime);
@@ -324,7 +330,6 @@ namespace DataStoreSample
             {
                 writer?.Close();
             }
-
             return status;
         }
 
