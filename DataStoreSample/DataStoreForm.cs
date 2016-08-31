@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using Newport.Usb;
-using Newport.USBComm;
 
 namespace DataStoreSample
 {
@@ -20,7 +18,7 @@ namespace DataStoreSample
         /// <summary>
         /// The maximum string length for an I/O transfer.
         /// </summary>
-        private const int m_kMaxXferLen = 64;
+        private const int maxTransferLength = 64;
 
         /// <summary>
         /// The USB communication object.
@@ -52,25 +50,7 @@ namespace DataStoreSample
         {
             try
             {
-                if (_newport != null)
-                {
-                    _connected = _newport.Connect();
-
-// If a device is attached via USB or if it cannot be determined
-                    // var count = _newport.NumProductsConnected(Program.m_kstrVendorProductID);
-                    // if (count != 0)
-                    // {
-                    // // Open all devices on the USB bus with the specified product ID
-                    // if (_newport.OpenDevices(Program.m_knProductID))
-                    // {
-                    // // Get the device ID of the first device in the list
-                    // ArrayList alDevInfoList = _newport.GetDevInfoList();
-                    // var devInfo = (DevInfo) alDevInfoList[0];
-                    // m_nDeviceID = devInfo.ID;
-                    // _connected = true;
-                    // }
-                    // }
-                }
+                _connected = _newport != null && _newport.Connect();
 
                 if (!_connected)
                 {
@@ -79,7 +59,7 @@ namespace DataStoreSample
             }
             catch (Exception ex)
             {   // Display the exception message
-                MessageBox.Show($"Could not establish communication with the power meter.\n{ex.Message}", "Connect", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Could not establish communication with the power meter.\n{ex.Message}", "Connect Exception", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -99,50 +79,50 @@ namespace DataStoreSample
                 }
 
                 // If the devices are not connected
-                if (!_connected)
-                {
-                    return;
-                }
+                if (!_connected) {  return; }
 
                 // Get the sample size from the edit box on the form
                 var nSampleSize = GetSampleSize();
 
                 // If the sample size is not valid
-                if (nSampleSize <= 0) { return; }
+                if (nSampleSize <= 0)
+                {
+                    return;
+                }
 
                 var sbCmd = new StringBuilder();
-//                var sbResponse = new StringBuilder();
+
+// var sbResponse = new StringBuilder();
                 var nSamples = 0;
                 rtbResponse.Text = string.Empty;
 
-                var status = _newport.Write("pm:ds:buffer 0\r");
+                var status = _newport.Write(NewportScpiCommands.DataStoreBuffer(0));
 
                 if (string.IsNullOrEmpty(status))
                 {
-                    status = _newport.Write("pm:ds:clear\r");
+                    status = _newport.Write(NewportScpiCommands.DataStoreClear);
                 }
 
                 if (string.IsNullOrEmpty(status))
                 {
-                    status = _newport.Write("pm:ds:interval 1\r");
+                    status = _newport.Write(NewportScpiCommands.DataStoreInterval(1));
                 }
 
                 if (string.IsNullOrEmpty(status))
                 {
-                    sbCmd.Append($"pm:ds:size {nSampleSize}\r");
-                    status = _newport.Write(sbCmd.ToString());
+                    status = _newport.Write(NewportScpiCommands.DataStoreSize(nSampleSize));
                 }
 
                 if (string.IsNullOrEmpty(status))
                 {
                     _newport.Flush();
-                    status = _newport.Write("pm:ds:enable 1\r");
+                    status = _newport.Write(NewportScpiCommands.DataStoreEnable);
                 }
 
                 if (string.IsNullOrEmpty(status))
                 {
                     nSamples = GetSampleCount(nSampleSize);
-                    status = _newport.Write("pm:ds:enable 0\r");
+                    status = _newport.Write(NewportScpiCommands.DataStoreDisable);
                 }
 
                 if (string.IsNullOrEmpty(status))
@@ -175,41 +155,28 @@ namespace DataStoreSample
         /// This method gets the sample size from the edit box on the form
         /// </summary>
         /// <returns>The sample size.</returns>
-        private int GetSampleSize()
+        private uint GetSampleSize()
         {
-            var nSampleSize = 0;
-
             try
-            {
-                // If the edit box is not empty
+            {   // If the edit box is not empty
                 if (txtSampleSize.Text.Length > 0)
                 {
-                    nSampleSize = Convert.ToInt32(txtSampleSize.Text);
+                    var nSampleSize = Convert.ToUInt32(txtSampleSize.Text);
+                    // If the sample size is within the valid range
+                    if (nSampleSize >= 1 && nSampleSize <= 250000)
+                    {
+                        return nSampleSize;
+                    }
                 }
-
-                // If the sample size is within the valid range
-                if (nSampleSize >= 1 && nSampleSize <= 250000)
-                {
-                    return nSampleSize;
-                }
-                else
-                {
-                    MessageBox.Show("The sample size must be from 1 to 250,000.", "DS:GET?", 
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    txtSampleSize.SelectAll();
-                    txtSampleSize.Focus();
-                }
+                MessageBox.Show("The sample size must be between 1 and 250,000.", "DS:GET?",  MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
                 // Display the exception message
-                var sbMsg = new StringBuilder(256);
-                sbMsg.AppendFormat("Could not read the sample size.\n{0}", ex.Message);
-                MessageBox.Show(sbMsg.ToString(), "DS:GET?", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                txtSampleSize.SelectAll();
-                txtSampleSize.Focus();
+                MessageBox.Show($"Could not read the sample size.\n{ex.Message}", "DS:GET?", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
+            txtSampleSize.SelectAll();
+            txtSampleSize.Focus();
             return 0;
         }
 
@@ -219,13 +186,13 @@ namespace DataStoreSample
         /// </summary>
         /// <param name="sampleSize">The sample size that the sample count should match.</param>
         /// <returns>The sample count.</returns>
-        private int GetSampleCount(int sampleSize)
+        private int GetSampleCount(uint sampleSize)
         {
             var nSamples = 0;
             var nStatus = 0;
             var sbResponse = new StringBuilder();
-            var dtStart = DateTime.Now;
-            var dtEnd = dtStart;
+            var startTime = DateTime.Now;
+            var endTime = startTime;
 
             // Repeat until an error occurs
             while (nStatus == 0)
@@ -233,12 +200,12 @@ namespace DataStoreSample
                 Thread.Sleep(1000);
                 
                 // Query the sample count
-                var writeResponse = _newport.Write("pm:ds:count?\r");
+                var writeResponse = _newport.Write(NewportScpiCommands.DataStoreCountQuery);
 
                 if (string.IsNullOrEmpty(writeResponse))
                 {
                     // Read the sample count
-                    sbResponse.Capacity = m_kMaxXferLen;
+                    sbResponse.Capacity = maxTransferLength;
                     string response;
                     if (_newport.TryRead(out response, out nStatus))
                     {
@@ -255,7 +222,7 @@ namespace DataStoreSample
                     }
                 }
 
-                dtEnd = DateTime.Now;
+                endTime = DateTime.Now;
             }
 
             return nSamples;
@@ -270,66 +237,64 @@ namespace DataStoreSample
         {
             StreamWriter writer = null;
             data = new List<double>(sampleCount);
-            int status = -1;
+            var status = -1;
             try
             {
-                var writeResponse = _newport.Write($"pm:ds:get? +{sampleCount}\r");
+                _newport.Write($"pm:ds:get? +{sampleCount}\r");
                 var startTime = DateTime.Now;
                 var sbWriteBuf = new StringBuilder(5120);
-                var nIdx = -1;
+
                 string response;
                 if (_newport.ReadBinaryUntil(NewportUsbPowerMeter.END_OF_HEADER, out response, out status))
                 {
-                    int markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_HEADER) + NewportUsbPowerMeter.END_OF_HEADER.Length;
+                    var markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_HEADER, StringComparison.Ordinal) + NewportUsbPowerMeter.END_OF_HEADER.Length;
 
-                    string bufferData = response.Substring(markerIndex);
+                    var bufferData = response.Substring(markerIndex);
                     if (_newport.ReadBinaryUntil(NewportUsbPowerMeter.END_OF_DATA, out response, out status))
                     {
-                        markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_DATA);
+                        markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_DATA, StringComparison.Ordinal);
                         bufferData += response.Substring(0, markerIndex);
                         using (writer = new StreamWriter("DataStore.txt", false))
                         {
                             rtbResponse.Text = "See DataStore.txt for the results.";
-                            //var strEndOfData = "End of Data\r\n";
-                            //var sbCompareBuf = new StringBuilder();
-                            //var sbResponse = new StringBuilder();
 
+// var strEndOfData = "End of Data\r\n";
+                            // var sbCompareBuf = new StringBuilder();
+                            // var sbResponse = new StringBuilder();
                             sbWriteBuf.AppendFormat("{0}\r\n", sampleCount);
                             sbWriteBuf.Append(bufferData);
                             writer.Write(sbWriteBuf.ToString());
 
-                            var split = bufferData.Split(new[] { "\r\n" } ,StringSplitOptions.RemoveEmptyEntries);
-                            if(split.Length != sampleCount)
+                            var split = bufferData.Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries);
+                            if (split.Length != sampleCount)
                             {
                                 Debug.WriteLine($"Retrieved count {split.Length} != sample count {sampleCount}");
                             }
                             else
                             {
-                                foreach(var str in split)
+                                foreach (var str in split)
                                 {
-                                    int result;
-                                    if(int.TryParse(str,out result))
+                                    double result;
+                                    if (double.TryParse(str, out result))
                                     {
                                         data.Add(result);
                                     }
                                 }
                             }
-                            
+
                             writer.Write(sbWriteBuf.ToString());
                         }
                     }
                 }
-                // Update the elapsed time
+
+// Update the elapsed time
                 UpdateDSGetTime(startTime);
-            }
-            catch
-            {
-                throw;
             }
             finally
             {
                 writer?.Close();
             }
+
             return status;
         }
 
@@ -340,22 +305,10 @@ namespace DataStoreSample
         private void UpdateDSGetTime(DateTime startTime)
         {
             // Update the elapsed time
-            var dSeconds = ElapsedMilliseconds(startTime, DateTime.Now)*1000;
-            txtTime.Text = FormatTimeData("{0:f}", dSeconds);
+            txtTime.Text = FormatTimeData(DateTime.Now.Subtract(startTime));
             txtTime.Update();
         }
 
-        /// <summary>
-        /// This method returns the number of elapsed milliseconds between the passed in start and end times.
-        /// </summary>
-        /// <param name="startTime">The start time.</param>
-        /// <param name="endTime">The end time.</param>
-        /// <returns>The number of elapsed milliseconds.</returns>
-        private double ElapsedMilliseconds(DateTime startTime, DateTime endTime)
-        {
-            var tsDiff = endTime.Subtract(startTime);
-            return tsDiff.TotalMilliseconds;
-        }
 
         /// <summary>
         /// This method gets the time data and formats it according to the specified format.
@@ -363,37 +316,11 @@ namespace DataStoreSample
         /// <param name="format">The format string for the time data.</param>
         /// <param name="time">The number of microseconds.</param>
         /// <returns>The formatted string.</returns>
-        private string FormatTimeData(string format, double time)
+        private string FormatTimeData(TimeSpan time)
         {
-            var sbTime = new StringBuilder(32);
-            var strUnits = GetTimeUnits(ref time);
-            sbTime.AppendFormat(format, time);
-            sbTime.AppendFormat(" {0}", strUnits);
-            return sbTime.ToString();
-        }
-
-        /// <summary>
-        /// This method converts the passed in time from microseconds to the appropriate units.  
-        /// It then returns the time and unit specifier.
-        /// </summary>
-        /// <param name="time">Input is the number of microseconds.  Output is the converted time.</param>
-        /// <returns>The unit specifier.</returns>
-        private string GetTimeUnits(ref double time)
-        {
-            if (time < 1000)
-            {
-                return "us";
-            }
-            else if (time < 1000000)
-            {
-                time /= 1000;
-                return "ms";
-            }
-            else
-            {
-                time /= 1000000;
-                return "sec";
-            }
+            if (time.TotalSeconds > 1.0) return $" {time.TotalSeconds} sec";
+            var ms = time.TotalMilliseconds;
+            return ms > 1.0 ? $" {ms} ms" : $" {ms*1000.0} us";
         }
     }
 }
