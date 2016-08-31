@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
+using System.Threading;
 using Newport.USBComm;
 
 namespace Newport.Usb
@@ -21,6 +24,11 @@ namespace Newport.Usb
         /// DeviceKey used to communicate with Newport device
         /// </summary>
         private string _deviceKey = null;
+
+        /// <summary>
+        /// The maximum string length for an I/O transfer.
+        /// </summary>
+        private const int maxTransferLength = 64;
 
         public const string END_OF_HEADER = "End of Header\r\n";
         public const string END_OF_DATA = "End of Data\r\n";
@@ -246,6 +254,98 @@ namespace Newport.Usb
             Debug.WriteLine(response);
             return false;
         }
+
+        /// <summary>
+        /// This method repeatedly queries the sample count until it matches the passed in sample size,
+        /// or until a timeout occurs.
+        /// </summary>
+        /// <param name="sampleSize">The sample size that the sample count should match.</param>
+        /// <returns>The sample count.</returns>
+        public int WaitForDataStore(uint sampleSize)
+        {
+            var nSamples = 0;
+            var nStatus = 0;
+            var sbResponse = new StringBuilder();
+            var startTime = DateTime.Now;
+            var endTime = startTime;
+
+            // Repeat until an error occurs
+            while (nStatus == 0)
+            {
+                Thread.Sleep(1000);
+
+                // Query the sample count
+                var writeResponse = Write(NewportScpiCommands.DataStoreCountQuery);
+
+                if (string.IsNullOrEmpty(writeResponse))
+                {
+                    // Read the sample count
+                    sbResponse.Capacity = maxTransferLength;
+                    string response;
+                    if (TryRead(out response, out nStatus))
+                    {
+                        sbResponse.Append(response);
+                        nSamples = Convert.ToInt32(sbResponse.ToString(), 10);
+
+                        // If the sample count matches the sample size
+                        if (nSamples == sampleSize)
+                        {
+                            break;
+                        }
+                    }
+                }
+                
+                endTime = DateTime.Now;
+                Debug.WriteLine($"{nSamples} Samples ready.  {(endTime - startTime).TotalSeconds}");
+            }
+
+            return nSamples;
+        }
+
+        public int ReadDataStoreValues(int sampleCount, out List<double> data)
+        {
+            data = new List<double>(sampleCount);
+            var status = -1;
+
+            {
+                Write($"pm:ds:get? +{sampleCount}\r");
+
+                // Read header....
+                string response;
+                if (!ReadBinaryUntil(NewportUsbPowerMeter.END_OF_HEADER, out response, out status)) return status;
+
+                // Copy remaining data (after 'End Of Header'), which is actual data, to receive buffer. 
+                var markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_HEADER, StringComparison.Ordinal) + NewportUsbPowerMeter.END_OF_HEADER.Length;
+
+                var receivedString = response.Substring(markerIndex);
+                // Read remaining data
+                if (!ReadBinaryUntil(NewportUsbPowerMeter.END_OF_DATA, out response, out status)) return status;
+
+                markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_DATA, StringComparison.Ordinal);
+                // Concatinate received data
+                receivedString += response.Substring(0, markerIndex);
+
+                // split on delimiter
+                var split = receivedString.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                if (split.Length != sampleCount)
+                {
+                    Debug.WriteLine($"Retrieved count {split.Length} != sample count {sampleCount}");
+                }
+                else
+                {
+                    foreach (var str in split)
+                    {
+                        double result;
+                        if (double.TryParse(str, out result))
+                        {
+                            data.Add(result);
+                        }
+                    }
+                }
+            }
+            return status;
+        }
+
         private int DisplayDeviceTable()
         {
             var hashTable = USB.GetDeviceTable();

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,10 +16,6 @@ namespace DataStoreSample
     /// </summary>
     public partial class DataStoreForm : Form
     {
-        /// <summary>
-        /// The maximum string length for an I/O transfer.
-        /// </summary>
-        private const int maxTransferLength = 64;
 
         /// <summary>
         /// The USB communication object.
@@ -85,15 +82,8 @@ namespace DataStoreSample
                 var nSampleSize = GetSampleSize();
 
                 // If the sample size is not valid
-                if (nSampleSize <= 0)
-                {
-                    return;
-                }
+                if (nSampleSize <= 0) { return; }
 
-                var sbCmd = new StringBuilder();
-
-// var sbResponse = new StringBuilder();
-                var nSamples = 0;
                 rtbResponse.Text = string.Empty;
 
                 var status = _newport.Write(NewportScpiCommands.DataStoreBuffer(0));
@@ -118,11 +108,13 @@ namespace DataStoreSample
                     _newport.Flush();
                     status = _newport.Write(NewportScpiCommands.DataStoreEnable);
                 }
-
+                var nSamples = 0;
                 if (string.IsNullOrEmpty(status))
                 {
-                    nSamples = GetSampleCount(nSampleSize);
+                    nSamples = _newport.WaitForDataStore(nSampleSize);
                     status = _newport.Write(NewportScpiCommands.DataStoreDisable);
+                    rtbResponse.Text = $"Samples = {nSamples}";
+                    rtbResponse.Update();
                 }
 
                 if (string.IsNullOrEmpty(status))
@@ -171,8 +163,7 @@ namespace DataStoreSample
                 MessageBox.Show("The sample size must be between 1 and 250,000.", "DS:GET?",  MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
-            {
-                // Display the exception message
+            {   // Display the exception message
                 MessageBox.Show($"Could not read the sample size.\n{ex.Message}", "DS:GET?", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             txtSampleSize.SelectAll();
@@ -180,53 +171,7 @@ namespace DataStoreSample
             return 0;
         }
 
-        /// <summary>
-        /// This method repeatedly queries the sample count until it matches the passed in sample size,
-        /// or until a timeout occurs.
-        /// </summary>
-        /// <param name="sampleSize">The sample size that the sample count should match.</param>
-        /// <returns>The sample count.</returns>
-        private int GetSampleCount(uint sampleSize)
-        {
-            var nSamples = 0;
-            var nStatus = 0;
-            var sbResponse = new StringBuilder();
-            var startTime = DateTime.Now;
-            var endTime = startTime;
-
-            // Repeat until an error occurs
-            while (nStatus == 0)
-            {
-                Thread.Sleep(1000);
-                
-                // Query the sample count
-                var writeResponse = _newport.Write(NewportScpiCommands.DataStoreCountQuery);
-
-                if (string.IsNullOrEmpty(writeResponse))
-                {
-                    // Read the sample count
-                    sbResponse.Capacity = maxTransferLength;
-                    string response;
-                    if (_newport.TryRead(out response, out nStatus))
-                    {
-                        sbResponse.Append(response);
-                        nSamples = Convert.ToInt32(sbResponse.ToString(), 10);
-                        rtbResponse.Text = "Samples = " + nSamples;
-                        rtbResponse.Update();
-
-                        // If the sample count matches the sample size
-                        if (nSamples == sampleSize)
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                endTime = DateTime.Now;
-            }
-
-            return nSamples;
-        }
+ 
 
         /// <summary>
         /// This method retrieves the data store values and writes them to a file.
@@ -235,60 +180,26 @@ namespace DataStoreSample
         /// <returns>The I/O status.</returns>
         private int GetDataStoreValues(int sampleCount, out List<double> data)
         {
+            int count = _newport.ReadDataStoreValues(sampleCount, out data);
             StreamWriter writer = null;
-            data = new List<double>(sampleCount);
+
             var status = -1;
             try
             {
-                _newport.Write($"pm:ds:get? +{sampleCount}\r");
-                var startTime = DateTime.Now;
                 var sbWriteBuf = new StringBuilder(5120);
 
-                string response;
-                if (_newport.ReadBinaryUntil(NewportUsbPowerMeter.END_OF_HEADER, out response, out status))
+                using (writer = new StreamWriter("DataStore.txt", false))
                 {
-                    var markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_HEADER, StringComparison.Ordinal) + NewportUsbPowerMeter.END_OF_HEADER.Length;
+                    rtbResponse.Text = "See DataStore.txt for the results.";
 
-                    var bufferData = response.Substring(markerIndex);
-                    if (_newport.ReadBinaryUntil(NewportUsbPowerMeter.END_OF_DATA, out response, out status))
+                    sbWriteBuf.AppendFormat("{0}\r\n", sampleCount);
+                    foreach(var item in data)
                     {
-                        markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_DATA, StringComparison.Ordinal);
-                        bufferData += response.Substring(0, markerIndex);
-                        using (writer = new StreamWriter("DataStore.txt", false))
-                        {
-                            rtbResponse.Text = "See DataStore.txt for the results.";
-
-// var strEndOfData = "End of Data\r\n";
-                            // var sbCompareBuf = new StringBuilder();
-                            // var sbResponse = new StringBuilder();
-                            sbWriteBuf.AppendFormat("{0}\r\n", sampleCount);
-                            sbWriteBuf.Append(bufferData);
-                            writer.Write(sbWriteBuf.ToString());
-
-                            var split = bufferData.Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries);
-                            if (split.Length != sampleCount)
-                            {
-                                Debug.WriteLine($"Retrieved count {split.Length} != sample count {sampleCount}");
-                            }
-                            else
-                            {
-                                foreach (var str in split)
-                                {
-                                    double result;
-                                    if (double.TryParse(str, out result))
-                                    {
-                                        data.Add(result);
-                                    }
-                                }
-                            }
-
-                            writer.Write(sbWriteBuf.ToString());
-                        }
+                        sbWriteBuf.AppendLine(item.ToString(CultureInfo.InvariantCulture));
                     }
+                            
+                    writer.Write(sbWriteBuf.ToString());
                 }
-
-// Update the elapsed time
-                UpdateDSGetTime(startTime);
             }
             finally
             {
