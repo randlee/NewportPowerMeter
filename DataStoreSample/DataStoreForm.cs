@@ -106,7 +106,7 @@ namespace DataStoreSample
                     _newport.Flush();
                     status = _newport.Write(NewportScpiCommands.DataStoreEnable);
                 }
-                var nSamples = 0;
+                uint nSamples = 0;
                 if (string.IsNullOrEmpty(status))
                 {
                     nSamples = _newport.WaitForDataStore(nSampleSize);
@@ -141,6 +141,102 @@ namespace DataStoreSample
             }
         }
 
+        private void buttonContinuous_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Connect if the device is not connected
+                if (!_connected) ConnectDevices();
+
+                // If the devices are not connected
+                if (!_connected) { return; }
+
+                // Get the sample size from the edit box on the form
+                var nSampleSize = GetSampleSize();
+
+                // If the sample size is not valid
+                if (nSampleSize <= 0) { return; }
+
+                rtbResponse.Text = string.Empty;
+
+                var status = _newport.Write(NewportScpiCommands.DataStoreBuffer(0));
+
+                if (string.IsNullOrEmpty(status))
+                {
+                    status = _newport.Write(NewportScpiCommands.DataStoreClear);
+                }
+
+                if (string.IsNullOrEmpty(status))
+                {
+                    status = _newport.Write(NewportScpiCommands.DataStoreInterval(1));
+                }
+
+                if (string.IsNullOrEmpty(status))
+                {
+                    status = _newport.Write(NewportScpiCommands.DataStoreSize(250000));
+                }
+                if (string.IsNullOrEmpty(status))
+                {
+                    status = _newport.Write(NewportScpiCommands.Mode(PmMode.DcContinuous));
+                }
+                if (string.IsNullOrEmpty(status))
+                {
+                    _newport.Flush();
+                    status = _newport.Write(NewportScpiCommands.DataStoreEnable);
+                }
+                if(string.IsNullOrEmpty(status))
+                {
+                    _newport.ContinuousData += _newport_ContinuousData;
+                    _newport.ContinuousReading(nSampleSize);
+                }
+
+#if false
+                uint nSamples = 0;
+                if (string.IsNullOrEmpty(status))
+                {
+                    nSamples = _newport.WaitForDataStore(nSampleSize);
+                    status = _newport.Write(NewportScpiCommands.DataStoreDisable);
+                    rtbResponse.Text = $"Samples = {nSamples}";
+                    rtbResponse.Update();
+                }
+
+                if (string.IsNullOrEmpty(status))
+                {
+                    List<double> data;
+                    var ioStatus = GetDataStoreValues(nSamples, out data);
+                    if (ioStatus == 0)
+                    {
+                        rtbResponse.Text = $"Count={data.Count} Min={data.Min()} Max={data.Max()}";
+                    }
+                    else
+                    {
+                        rtbResponse.Text += $"\rStatus = {ioStatus}";
+                    }
+                }
+#endif
+                if (!string.IsNullOrEmpty(status))
+                {
+                    rtbResponse.Text += $"\rStatus = {status}";
+                }
+            }
+            catch (Exception ex)
+            {
+                // Display the exception message
+                MessageBox.Show($"Could not complete the DS:GET? query.\n{ex.Message}", "DS:GET?", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void _newport_ContinuousData(List<double> obj)
+        {
+            var displayText = $"{DateTime.Now} Rx {obj.Count}/{_newport.SamplesRead}";
+            if (rtbResponse.InvokeRequired)
+            {
+                BeginInvoke(new Action(() => rtbResponse.Text = displayText) , null);
+                return;
+            }
+            rtbResponse.Text = displayText;
+        }
+
         /// <summary>
         /// This method gets the sample size from the edit box on the form
         /// </summary>
@@ -151,11 +247,11 @@ namespace DataStoreSample
             {   // If the edit box is not empty
                 if (txtSampleSize.Text.Length > 0)
                 {
-                    var nSampleSize = Convert.ToUInt32(txtSampleSize.Text);
+                    var samplesRequested = Convert.ToUInt32(txtSampleSize.Text);
                     // If the sample size is within the valid range
-                    if (nSampleSize >= 1 && nSampleSize <= 250000)
+                    if (samplesRequested >= 1 && samplesRequested <= 250000)
                     {
-                        return nSampleSize;
+                        return samplesRequested;
                     }
                 }
                 MessageBox.Show("The sample size must be between 1 and 250,000.", "DS:GET?",  MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -176,7 +272,7 @@ namespace DataStoreSample
         /// </summary>
         /// <param name="sampleCount"></param>
         /// <returns>The I/O status.</returns>
-        private int GetDataStoreValues(int sampleCount, out List<double> data)
+        private int GetDataStoreValues(uint sampleCount, out List<double> data)
         {
             int count = _newport.ReadDataStoreValues(sampleCount, out data);
             StreamWriter writer = null;

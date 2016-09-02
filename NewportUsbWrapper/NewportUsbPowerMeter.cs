@@ -12,7 +12,7 @@ namespace Newport.Usb
         /// <summary>
         /// The USB communication object.
         /// </summary>
-        private readonly USB USB;
+        private readonly USB _usb;
 
         /// <summary>
         /// The USB address of the device that is being communicated with.
@@ -34,12 +34,12 @@ namespace Newport.Usb
 
         public NewportUsbPowerMeter()
         {
-            USB = new USB();
+            _usb = new USB();
         }
 
         public bool Connect()
         {
-            if (USB == null) return false;
+            if (_usb == null) return false;
             bool open = false;
 #if false
 
@@ -59,7 +59,7 @@ namespace Newport.Usb
                 }
             }
 #else
-            open = USB.OpenDevices(0, true);
+            open = _usb.OpenDevices(0, true);
 
             // If the devices were not opened successfully
             if (!open)
@@ -76,7 +76,7 @@ namespace Newport.Usb
                 if (nDeviceCount <= 0) return open;
                 _deviceID = -1;
                 // Select a device key from the list
-                var table = USB.GetDeviceTable();
+                var table = _usb.GetDeviceTable();
                 foreach (var item in table.Keys)
                 {
                     _deviceKey = item as string;
@@ -93,14 +93,14 @@ namespace Newport.Usb
         public void Disconnect()
         {
             // Close all devices on the USB bus
-            USB?.CloseDevices();
+            _usb?.CloseDevices();
             _deviceID = -1;
             _deviceKey = null;
         }
 
         public void Flush()
         {
-            if (USB == null) return;
+            if (_usb == null) return;
             string response;
             int status;
             while (TryRead(out response, out status))
@@ -118,14 +118,14 @@ namespace Newport.Usb
             try
             {
                 var nIOStatus = USB.m_knUSBAddrNotFound;
-                if (USB != null)
+                if (_usb != null)
                 {
                     Debug.WriteLine(command);
-                    if (_deviceID > 0) nIOStatus = USB.Write(_deviceID, command);
-                    else if (!string.IsNullOrEmpty(_deviceKey)) nIOStatus = USB.Write(_deviceKey, command);
+                    if (_deviceID > 0) nIOStatus = _usb.Write(_deviceID, command);
+                    else if (!string.IsNullOrEmpty(_deviceKey)) nIOStatus = _usb.Write(_deviceKey, command);
                 }
                 // If no error status
-                return nIOStatus == 0 ? string.Empty : $"Error Code = {nIOStatus}, 0x{nIOStatus.ToString("X")}";
+                return nIOStatus == 0 ? string.Empty : $"Write Error Code = {nIOStatus}, 0x{nIOStatus.ToString("X")}";
             }
             catch (Exception ex)
             {
@@ -142,12 +142,12 @@ namespace Newport.Usb
             try
             {
                 var nIOStatus = USB.m_knUSBAddrNotFound;
-                if (USB != null)
+                if (_usb != null)
                 {
                     // The firmware limits the transfer size to the maximum packet size of 64 bytes
                     var sbResponse = new StringBuilder(64);
-                    if (_deviceID > 0) nIOStatus = USB.Read(_deviceID, sbResponse);
-                    else if (!string.IsNullOrEmpty(_deviceKey)) nIOStatus = USB.Read(_deviceKey, sbResponse);
+                    if (_deviceID > 0) nIOStatus = _usb.Read(_deviceID, sbResponse);
+                    else if (!string.IsNullOrEmpty(_deviceKey)) nIOStatus = _usb.Read(_deviceKey, sbResponse);
 
                     if (nIOStatus == 0)
                     {
@@ -157,7 +157,7 @@ namespace Newport.Usb
                     }
                 }
 
-                return $"Error Code = {nIOStatus}, 0x{nIOStatus.ToString("X")}";
+                return $"Read Error Code = {nIOStatus}, 0x{nIOStatus.ToString("X")}";
             }
             catch (Exception ex)
             {
@@ -172,18 +172,18 @@ namespace Newport.Usb
             {
                 // The firmware limits the transfer size to the maximum packet size of 64 bytes
                 var sbResponse = new StringBuilder(64);
-                if (USB != null)
+                if (_usb != null)
                 {
-                    if (_deviceID > 0) ioStatus = USB.Read(_deviceID, sbResponse);
-                    else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = USB.Read(_deviceKey, sbResponse);
+                    if (_deviceID > 0) ioStatus = _usb.Read(_deviceID, sbResponse);
+                    else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = _usb.Read(_deviceKey, sbResponse);
                 }
                 if (ioStatus == 0)
                 {
                     response = sbResponse.ToString();
-                    Debug.WriteLine($"[{response.Length}] '{response}'");
+//                    Debug.WriteLine($"[{response.Length}] '{response}'");
                     return true;
                 }
-                response = $"Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}";
+                response = $"TryRead Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}";
             }
             catch (Exception ex)
             {
@@ -199,18 +199,19 @@ namespace Newport.Usb
             {
                 // The firmware limits the transfer size to the maximum packet size of 64 bytes
                 var sbResponse = new StringBuilder(64);
-                if (USB != null)
+                if (_usb != null)
                 {
-                    if (_deviceID > 0) ioStatus = USB.ReadBinary(_deviceID, sbResponse);
-                    else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = USB.ReadBinary(_deviceKey, sbResponse);
+                    if (_deviceID > 0) ioStatus = _usb.ReadBinary(_deviceID, sbResponse);
+                    else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = _usb.ReadBinary(_deviceKey, sbResponse);
                 }
                 if (ioStatus == 0)
                 {
                     response = sbResponse.ToString();
-                    Debug.WriteLine($"[{response.Length}] '{response}'");
+//                    Debug.WriteLine($"Read {response.Length} bytes");
+//                    Debug.WriteLine($"[{response.Length}] '{response}'");
                     return true;
                 }
-                response = $"Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}";
+                response = $"TryReadBinary Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}";
             }
             catch (Exception ex)
             {
@@ -219,29 +220,34 @@ namespace Newport.Usb
             Debug.WriteLine(response);
             return false;
         }
-
+        
         public bool ReadBinaryUntil(string match, out string response, out int ioStatus)
         {
             ioStatus = USB.m_knUSBAddrNotFound;
             try
             {
                 // The firmware limits the transfer size to the maximum packet size of 64 bytes
+                int readCount=0;
+                DateTime start = DateTime.Now;
                 var sbResponse = new StringBuilder(1024);
-                if (USB != null)
+                if (_usb != null)
                 {
                     ioStatus = 0;
                     while (ioStatus == 0 && !sbResponse.ToString().Contains(match))
                     {
                         var sbTemp = new StringBuilder(64);
-                        if (_deviceID > 0) ioStatus = USB.ReadBinary(_deviceID, sbTemp);
-                        else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = USB.ReadBinary(_deviceKey, sbTemp);
+                        if (_deviceID > 0) ioStatus = _usb.ReadBinary(_deviceID, sbTemp);
+                        else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = _usb.ReadBinary(_deviceKey, sbTemp);
                         sbResponse.Append(sbTemp);
+                        readCount++;
                     }
                 }
                 if (ioStatus == 0)
                 {
+                    Debug.WriteLine($"{readCount} reads in {(DateTime.Now - start).TotalSeconds} sec");
                     response = sbResponse.ToString();
-                    Debug.WriteLine($"[{response.Length}] '{response}'");
+//                    Debug.WriteLine($"Read {response.Length} bytes");
+//                    Debug.WriteLine($"[{response.Length}] '{response}'");
                     return true;
                 }
                 response = $"Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}";
@@ -260,19 +266,19 @@ namespace Newport.Usb
         /// </summary>
         /// <param name="sampleSize">The sample size that the sample count should match.</param>
         /// <returns>The sample count.</returns>
-        public int WaitForDataStore(uint sampleSize)
+        public uint WaitForDataStore(uint sampleSize)
         {
-            var nSamples = 0;
+            uint nSamples = 0;
             var nStatus = 0;
-            var sbResponse = new StringBuilder();
+            var sbResponse = new StringBuilder(maxTransferLength);
             var startTime = DateTime.Now;
             var endTime = startTime;
 
             // Repeat until an error occurs
             while (nStatus == 0)
             {
-                Thread.Sleep(1000);
-
+                Thread.Sleep(100);
+                sbResponse.Length = 0;
                 // Query the sample count
                 var writeResponse = Write(NewportScpiCommands.DataStoreCountQuery);
 
@@ -284,7 +290,7 @@ namespace Newport.Usb
                     if (TryRead(out response, out nStatus))
                     {
                         sbResponse.Append(response);
-                        nSamples = Convert.ToInt32(sbResponse.ToString(), 10);
+                        nSamples = Convert.ToUInt32(sbResponse.ToString(), 10);
 
                         // If the sample count matches the sample size
                         if (nSamples == sampleSize)
@@ -301,9 +307,9 @@ namespace Newport.Usb
             return nSamples;
         }
 
-        public int ReadDataStoreValues(int sampleCount, out List<double> data)
+        public int ReadDataStoreValues(uint sampleCount, out List<double> data)
         {
-            data = new List<double>(sampleCount);
+            data = new List<double>((int)sampleCount);
             var status = -1;
 
             {
@@ -347,7 +353,7 @@ namespace Newport.Usb
 
         private int DisplayDeviceTable()
         {
-            var hashTable = USB.GetDeviceTable();
+            var hashTable = _usb.GetDeviceTable();
 
             if (hashTable != null)
             {
@@ -366,7 +372,7 @@ namespace Newport.Usb
 
         private int DisplayDeviceInfo()
         {
-            var devices = USB.GetDevInfoList();
+            var devices = _usb.GetDevInfoList();
             if (devices != null)
             {
                 Debug.WriteLine($"{devices.Count} devices in DevInfoList");
@@ -379,6 +385,48 @@ namespace Newport.Usb
             }
             Debug.WriteLine($"No USB devices found in DevInfoList!");
             return 0;
+        }
+
+        private uint _samples = 0;
+        public void ContinuousReading(uint samples)
+        {
+            if (samples == _samples) return;
+            if (_samples > 0)
+            {   // already running
+                _samples = samples;
+            }
+            else
+            {   // Not currently running
+                if (samples == 0) return;
+                _samples = samples;
+                ThreadPool.QueueUserWorkItem(RunContinuousTask, null);
+            }
+        }
+
+
+
+        public virtual event Action<List<double>> ContinuousData;
+        public int SamplesRead { get; private set; }
+
+        protected virtual void RunContinuousTask(object unused)
+        {
+            SamplesRead = 0;
+            while (true)
+            {
+                var samples = _samples;
+                if (samples <= 0) break;
+                Flush();
+                WaitForDataStore(samples);
+
+                var samplesReady = WaitForDataStore(samples);
+                if (samplesReady > samples)
+                {
+                    var result = new List<double>((int) _samples);
+                    ReadDataStoreValues(samples, out result);
+                    SamplesRead += result.Count;
+                    ContinuousData?.Invoke(result);
+                }
+            }
         }
     }
 }
