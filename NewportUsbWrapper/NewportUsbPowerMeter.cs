@@ -30,7 +30,7 @@ namespace Newport.Usb
         private const int maxTransferLength = 64;
 
         public const string END_OF_HEADER = "End of Header\r\n";
-        public const string END_OF_DATA = "End of Data\r\n";
+        public const string END_OF_DATA = "End of Data";
 
         public NewportUsbPowerMeter()
         {
@@ -221,7 +221,7 @@ namespace Newport.Usb
             return false;
         }
         
-        public bool ReadBinaryUntil(string match, out string response, out int ioStatus)
+        public bool ReadBinaryUntil(string match, uint expectedLength, out string response, out int ioStatus)
         {
             ioStatus = USB.m_knUSBAddrNotFound;
             try
@@ -229,13 +229,13 @@ namespace Newport.Usb
                 // The firmware limits the transfer size to the maximum packet size of 64 bytes
                 int readCount=0;
                 DateTime start = DateTime.Now;
-                var sbResponse = new StringBuilder(1024);
+                var sbResponse = new StringBuilder((int)expectedLength);
                 if (_usb != null)
                 {
                     ioStatus = 0;
                     while (ioStatus == 0 && !sbResponse.ToString().Contains(match))
                     {
-                        var sbTemp = new StringBuilder(64);
+                        var sbTemp = new StringBuilder((int)expectedLength);
                         if (_deviceID > 0) ioStatus = _usb.ReadBinary(_deviceID, sbTemp);
                         else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = _usb.ReadBinary(_deviceKey, sbTemp);
                         sbResponse.Append(sbTemp);
@@ -245,6 +245,7 @@ namespace Newport.Usb
                 if (ioStatus == 0)
                 {
                     Debug.WriteLine($"{readCount} reads in {(DateTime.Now - start).TotalSeconds} sec");
+                    Debug.WriteLine($"Response Length={sbResponse.Length}");
                     response = sbResponse.ToString();
 //                    Debug.WriteLine($"Read {response.Length} bytes");
 //                    Debug.WriteLine($"[{response.Length}] '{response}'");
@@ -260,51 +261,131 @@ namespace Newport.Usb
             return false;
         }
 
+
+
+        public bool ReadDataUntil(string match, uint expectedLength,string preamble, out int ioStatus, out List<double> data)
+        {
+            ioStatus = USB.m_knUSBAddrNotFound;
+            data = new List<double>((int)expectedLength);
+            var readSize = new List<int>(128);
+            
+            try
+            {
+                // The firmware limits the transfer size to the maximum packet size of 64 bytes
+                int readCount = 0;
+                DateTime start = DateTime.Now;
+//                var sbResponse = new StringBuilder((int)expectedLength);
+                if (_usb != null)
+                {
+                    ioStatus = 0;
+                    var sbTemp = new StringBuilder((int)expectedLength * 16);
+                    while (ioStatus == 0)
+                    {
+                        sbTemp.Length = 0;
+                        if (_deviceID > 0) ioStatus = _usb.ReadBinary(_deviceID, sbTemp);
+                        else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = _usb.ReadBinary(_deviceKey, sbTemp);
+                        readCount++;
+                        if (ioStatus != 0)
+                        {
+                            break;
+                        }
+                        preamble += sbTemp.ToString();
+                        var split = preamble.Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries);
+                        preamble = "";
+                        var length = split.Length;
+                        if (length <= 0) continue;
+                        readSize.Add(length);
+                        if (length > 1)
+                        {
+                            for (var i = 0; i < length - 1; i++)
+                            {
+                                double result;
+                                if (double.TryParse(split[i], out result))
+                                {
+                                    data.Add(result);
+                                }
+                            }
+                        }
+
+                        if(split[length-1].Contains(match))
+                        {
+                            var seconds = (DateTime.Now - start).TotalSeconds;
+                            var min = int.MaxValue;
+                            var max = 0;
+                            foreach(var size in readSize)
+                            {
+                                if (size < min) min = size;
+                                if (size > max) max = size;
+                            }
+                            Debug.WriteLine($"{readCount} reads in {seconds} sec. Min={min} Max={max}");
+                            Debug.WriteLine($"Response Length={data.Count} {seconds/data.Count} samples/sec");
+                            return true;
+                        }
+
+                        if (data.Count >= expectedLength)
+                        {
+                            Debug.WriteLine($"Count:{data.Count} >= {expectedLength}");
+                        }
+                        preamble = split[length - 1];
+                    }
+                }
+                //if (ioStatus == 0)
+                //{
+                //    Debug.WriteLine($"{readCount} reads in {(DateTime.Now - start).TotalSeconds} sec");
+                //    Debug.WriteLine($"Response Length={data.Count}");
+                //    return true;
+                //}
+                Debug.WriteLine($"Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Could not read the command response.\r\n{ex.Message}");
+            }
+            return false;
+        }
+
         /// <summary>
         /// This method repeatedly queries the sample count until it matches the passed in sample size,
         /// or until a timeout occurs.
         /// </summary>
-        /// <param name="sampleSize">The sample size that the sample count should match.</param>
+        /// <param name="samplesRequested">The sample size that the sample count should match.</param>
         /// <returns>The sample count.</returns>
-        public uint WaitForDataStore(uint sampleSize)
+        public uint WaitForDataStore(uint samplesRequested)
         {
-            uint nSamples = 0;
+            uint samplesReady = 0;
             var nStatus = 0;
-            var sbResponse = new StringBuilder(maxTransferLength);
             var startTime = DateTime.Now;
-            var endTime = startTime;
 
             // Repeat until an error occurs
             while (nStatus == 0)
             {
-                Thread.Sleep(100);
-                sbResponse.Length = 0;
                 // Query the sample count
                 var writeResponse = Write(NewportScpiCommands.DataStoreCountQuery);
 
                 if (string.IsNullOrEmpty(writeResponse))
                 {
                     // Read the sample count
-                    sbResponse.Capacity = maxTransferLength;
                     string response;
                     if (TryRead(out response, out nStatus))
                     {
-                        sbResponse.Append(response);
-                        nSamples = Convert.ToUInt32(sbResponse.ToString(), 10);
-
+                        samplesReady = Convert.ToUInt32(response, 10);
+                        Debug.WriteLine($"{samplesReady} samples ready.");
                         // If the sample count matches the sample size
-                        if (nSamples == sampleSize)
+                        if (samplesReady >= samplesRequested)
                         {
                             break;
                         }
                     }
                 }
-                
-                endTime = DateTime.Now;
-                Debug.WriteLine($"{nSamples} Samples ready.  {(endTime - startTime).TotalSeconds}");
+                else
+                {
+                    Debug.WriteLine($"Error response '{writeResponse}'");
+                }
+                Thread.Sleep(10);
             }
+            Debug.WriteLine($"{samplesReady} Samples ready.  {(DateTime.Now - startTime).TotalSeconds}");
 
-            return nSamples;
+            return samplesReady;
         }
 
         public int ReadDataStoreValues(uint sampleCount, out List<double> data)
@@ -314,39 +395,22 @@ namespace Newport.Usb
 
             {
                 Write($"pm:ds:get? +{sampleCount}\r");
+                string receivedString;
+                {
+                    // Read header....
+                    string response;
+                    if (!ReadBinaryUntil(NewportUsbPowerMeter.END_OF_HEADER, 1024, out response, out status))
+                        return status;
 
-                // Read header....
-                string response;
-                if (!ReadBinaryUntil(NewportUsbPowerMeter.END_OF_HEADER, out response, out status)) return status;
+                    // Copy remaining data (after 'End Of Header'), which is actual data, to receive buffer. 
+                    var markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_HEADER, StringComparison.Ordinal) +
+                                      NewportUsbPowerMeter.END_OF_HEADER.Length;
 
-                // Copy remaining data (after 'End Of Header'), which is actual data, to receive buffer. 
-                var markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_HEADER, StringComparison.Ordinal) + NewportUsbPowerMeter.END_OF_HEADER.Length;
-
-                var receivedString = response.Substring(markerIndex);
+                    receivedString = response.Substring(markerIndex);
+                }
                 // Read remaining data
-                if (!ReadBinaryUntil(NewportUsbPowerMeter.END_OF_DATA, out response, out status)) return status;
-
-                markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_DATA, StringComparison.Ordinal);
-                // Concatinate received data
-                receivedString += response.Substring(0, markerIndex);
-
-                // split on delimiter
-                var split = receivedString.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-                if (split.Length != sampleCount)
-                {
-                    Debug.WriteLine($"Retrieved count {split.Length} != sample count {sampleCount}");
-                }
-                else
-                {
-                    foreach (var str in split)
-                    {
-                        double result;
-                        if (double.TryParse(str, out result))
-                        {
-                            data.Add(result);
-                        }
-                    }
-                }
+                List<double> rxData=null;
+                if (!ReadDataUntil(NewportUsbPowerMeter.END_OF_DATA, sampleCount, receivedString, out status, out rxData)) return status;
             }
             return status;
         }
@@ -416,12 +480,12 @@ namespace Newport.Usb
                 var samples = _samples;
                 if (samples <= 0) break;
                 Flush();
-                WaitForDataStore(samples);
+//                WaitForDataStore(samples);
 
                 var samplesReady = WaitForDataStore(samples);
-                if (samplesReady > samples)
+                if (samplesReady >= samples)
                 {
-                    var result = new List<double>((int) _samples);
+                    List<double> result;
                     ReadDataStoreValues(samples, out result);
                     SamplesRead += result.Count;
                     ContinuousData?.Invoke(result);
