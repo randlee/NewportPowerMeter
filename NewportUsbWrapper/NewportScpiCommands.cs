@@ -11,6 +11,7 @@
         PulseSingle = 6,
         RMS = 7
     }
+
     public static class NewportScpiCommands
     {
         public static string Identity => "*IDN?";
@@ -24,9 +25,17 @@
 
         public static string DataStoreClear => "PM:DS:CLEAR\r";
         public static string DataStoreCountQuery => "PM:DS:COUNT?\r";
-        public static string DataStoreBuffer(uint index) { return $"PM:DS:BUFFER {index}\r"; }
-        public static string DataStoreInterval(uint index) { return $"PM:DS:INTERVAL {index}\r"; }
+        public static string DataStoreBuffer(uint index) => $"PM:DS:BUFFER {index}\r";
+        public static string DataStoreInterval(uint index) => $"PM:DS:INTERVAL {index}\r";
 
-        public static string DataStoreSize(uint sampleSize) { return $"PM:DS:SIZE {sampleSize}\r"; }
+        /// <summary>
+        /// PM:DS:SIZE <size [1-250000]>
+        /// Parameters: The parameter<size>is of type<integer> in the range 1 to 250000.
+        /// The parameter represents the size of the data buffer to be used for data storing.
+        /// Function: This command sets the size of the buffer for the currently selected channel used for data storing.
+        /// </summary>
+        /// <param name="bufferSize">Size of DS buffer to allocate</param>
+        /// <returns></returns>
+        public static string DataStoreSize(uint bufferSize) => $"PM:DS:SIZE {bufferSize}\r";
     }
 }
