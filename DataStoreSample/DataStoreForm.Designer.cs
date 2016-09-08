@@ -36,6 +36,8 @@ namespace DataStoreSample
             this.lblTime = new System.Windows.Forms.Label();
             this.txtTime = new System.Windows.Forms.TextBox();
             this.buttonContinuous = new System.Windows.Forms.Button();
+            this.buttonAbort = new System.Windows.Forms.Button();
+            this.buttonTriggered = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // lblSampleSize
@@ -51,7 +53,7 @@ namespace DataStoreSample
             // txtSampleSize
             // 
             this.txtSampleSize.Location = new System.Drawing.Point(172, 23);
-            this.txtSampleSize.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.txtSampleSize.Margin = new System.Windows.Forms.Padding(6);
             this.txtSampleSize.MaxLength = 6;
             this.txtSampleSize.Name = "txtSampleSize";
             this.txtSampleSize.Size = new System.Drawing.Size(160, 31);
@@ -60,13 +62,13 @@ namespace DataStoreSample
             // btnGet
             // 
             this.btnGet.Location = new System.Drawing.Point(410, 23);
-            this.btnGet.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.btnGet.Margin = new System.Windows.Forms.Padding(6);
             this.btnGet.Name = "btnGet";
             this.btnGet.Size = new System.Drawing.Size(150, 44);
             this.btnGet.TabIndex = 2;
             this.btnGet.Text = "DS:Get?";
             this.btnGet.UseVisualStyleBackColor = true;
-            this.btnGet.Click += new System.EventHandler(this.OnClick_btnGet);
+            this.btnGet.Click += new System.EventHandler(this.OnClick_buttonGet);
             // 
             // lblResponse
             // 
@@ -82,7 +84,7 @@ namespace DataStoreSample
             // 
             this.rtbResponse.BackColor = System.Drawing.SystemColors.Control;
             this.rtbResponse.Location = new System.Drawing.Point(172, 83);
-            this.rtbResponse.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.rtbResponse.Margin = new System.Windows.Forms.Padding(6);
             this.rtbResponse.Name = "rtbResponse";
             this.rtbResponse.ReadOnly = true;
             this.rtbResponse.Size = new System.Drawing.Size(384, 73);
@@ -104,7 +106,7 @@ namespace DataStoreSample
             // 
             this.txtTime.ForeColor = System.Drawing.SystemColors.WindowText;
             this.txtTime.Location = new System.Drawing.Point(172, 171);
-            this.txtTime.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.txtTime.Margin = new System.Windows.Forms.Padding(6);
             this.txtTime.Name = "txtTime";
             this.txtTime.ReadOnly = true;
             this.txtTime.Size = new System.Drawing.Size(384, 31);
@@ -122,11 +124,36 @@ namespace DataStoreSample
             this.buttonContinuous.UseVisualStyleBackColor = true;
             this.buttonContinuous.Click += new System.EventHandler(this.buttonContinuous_Click);
             // 
+            // buttonAbort
+            // 
+            this.buttonAbort.Enabled = false;
+            this.buttonAbort.Location = new System.Drawing.Point(601, 171);
+            this.buttonAbort.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonAbort.Name = "buttonAbort";
+            this.buttonAbort.Size = new System.Drawing.Size(150, 44);
+            this.buttonAbort.TabIndex = 18;
+            this.buttonAbort.Text = "Abort";
+            this.buttonAbort.UseVisualStyleBackColor = true;
+            this.buttonAbort.Click += new System.EventHandler(this.buttonAbort_Click);
+            // 
+            // buttonTriggered
+            // 
+            this.buttonTriggered.Location = new System.Drawing.Point(601, 97);
+            this.buttonTriggered.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonTriggered.Name = "buttonTriggered";
+            this.buttonTriggered.Size = new System.Drawing.Size(150, 44);
+            this.buttonTriggered.TabIndex = 19;
+            this.buttonTriggered.Text = "Triggered";
+            this.buttonTriggered.UseVisualStyleBackColor = true;
+            this.buttonTriggered.Click += new System.EventHandler(this.buttonTriggered_Click);
+            // 
             // DataStoreForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(841, 222);
+            this.Controls.Add(this.buttonTriggered);
+            this.Controls.Add(this.buttonAbort);
             this.Controls.Add(this.buttonContinuous);
             this.Controls.Add(this.txtTime);
             this.Controls.Add(this.lblTime);
@@ -136,7 +163,7 @@ namespace DataStoreSample
             this.Controls.Add(this.txtSampleSize);
             this.Controls.Add(this.lblSampleSize);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.Margin = new System.Windows.Forms.Padding(6);
             this.MaximizeBox = false;
             this.Name = "DataStoreForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
@@ -156,6 +183,8 @@ namespace DataStoreSample
         private System.Windows.Forms.Label lblTime;
         private System.Windows.Forms.TextBox txtTime;
         private System.Windows.Forms.Button buttonContinuous;
+        private System.Windows.Forms.Button buttonAbort;
+        private System.Windows.Forms.Button buttonTriggered;
     }
 }
 

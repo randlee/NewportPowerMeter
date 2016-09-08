@@ -36,6 +36,7 @@ namespace DataStoreSample
         {
             InitializeComponent();
             _newport = new NewportUsbPowerMeter();
+            _newport.ContinuousData += _newport_ContinuousData;
         }
 
         /// <summary>
@@ -63,7 +64,7 @@ namespace DataStoreSample
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void OnClick_btnGet(object sender, EventArgs e)
+        private void OnClick_buttonGet(object sender, EventArgs e)
         {
             try
             {
@@ -84,28 +85,30 @@ namespace DataStoreSample
 
                 rtbResponse.Text = string.Empty;
 
-                var status = _newport.Write(NewportScpiCommands.DataStoreBuffer(0));
+                var status = _newport.DatastoreInitialize(true, false, PowermeterMode.DcContinuous, nSampleSize, 1);
 
-                if (string.IsNullOrEmpty(status))
-                {
-                    status = _newport.Write(NewportScpiCommands.DataStoreClear);
-                }
+                //var status = _newport.Write(NewportScpiCommands.DataStoreBuffer(false));
 
-                if (string.IsNullOrEmpty(status))
-                {
-                    status = _newport.Write(NewportScpiCommands.DataStoreInterval(1));
-                }
+                //if (string.IsNullOrEmpty(status))
+                //{
+                //    status = _newport.Write(NewportScpiCommands.DataStoreClear);
+                //}
 
-                if (string.IsNullOrEmpty(status))
-                {
-                    status = _newport.Write(NewportScpiCommands.DataStoreSize(nSampleSize));
-                }
+                //if (string.IsNullOrEmpty(status))
+                //{
+                //    status = _newport.Write(NewportScpiCommands.DataStoreInterval(1));
+                //}
 
-                if (string.IsNullOrEmpty(status))
-                {
-                    _newport.Flush();
-                    status = _newport.Write(NewportScpiCommands.DataStoreEnable);
-                }
+                //if (string.IsNullOrEmpty(status))
+                //{
+                //    status = _newport.Write(NewportScpiCommands.DataStoreSize(nSampleSize));
+                //}
+
+                //if (string.IsNullOrEmpty(status))
+                //{
+                //    _newport.Flush();
+                //    status = _newport.Write(NewportScpiCommands.DataStoreEnable);
+                //}
                 uint nSamples = 0;
                 if (string.IsNullOrEmpty(status))
                 {
@@ -159,61 +162,13 @@ namespace DataStoreSample
 
                 rtbResponse.Text = string.Empty;
 
-                var status = _newport.Write(NewportScpiCommands.DataStoreBuffer(0));
-
-                if (string.IsNullOrEmpty(status))
-                {
-                    status = _newport.Write(NewportScpiCommands.DataStoreClear);
-                }
-
-                if (string.IsNullOrEmpty(status))
-                {
-                    status = _newport.Write(NewportScpiCommands.DataStoreInterval(1));
-                }
-
-                if (string.IsNullOrEmpty(status))
-                {
-                    status = _newport.Write(NewportScpiCommands.DataStoreSize(250000));
-                }
-                if (string.IsNullOrEmpty(status))
-                {
-                    status = _newport.Write(NewportScpiCommands.Mode(PmMode.DcContinuous));
-                }
-                if (string.IsNullOrEmpty(status))
-                {
-                    _newport.Flush();
-                    status = _newport.Write(NewportScpiCommands.DataStoreEnable);
-                }
+                var status = _newport.ContinuousMeasurementSetup();
                 if(string.IsNullOrEmpty(status))
                 {
-                    _newport.ContinuousData += _newport_ContinuousData;
                     _newport.ContinuousReading(nSampleSize);
+                    updateButtonState(true);
                 }
 
-#if false
-                uint nSamples = 0;
-                if (string.IsNullOrEmpty(status))
-                {
-                    nSamples = _newport.WaitForDataStore(nSampleSize);
-                    status = _newport.Write(NewportScpiCommands.DataStoreDisable);
-                    rtbResponse.Text = $"Samples = {nSamples}";
-                    rtbResponse.Update();
-                }
-
-                if (string.IsNullOrEmpty(status))
-                {
-                    List<double> data;
-                    var ioStatus = GetDataStoreValues(nSamples, out data);
-                    if (ioStatus == 0)
-                    {
-                        rtbResponse.Text = $"Count={data.Count} Min={data.Min()} Max={data.Max()}";
-                    }
-                    else
-                    {
-                        rtbResponse.Text += $"\rStatus = {ioStatus}";
-                    }
-                }
-#endif
                 if (!string.IsNullOrEmpty(status))
                 {
                     rtbResponse.Text += $"\rStatus = {status}";
@@ -225,6 +180,8 @@ namespace DataStoreSample
                 MessageBox.Show($"Could not complete the DS:GET? query.\n{ex.Message}", "DS:GET?", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+
 
         private void _newport_ContinuousData(List<double> obj)
         {
@@ -326,6 +283,26 @@ namespace DataStoreSample
             if (time.TotalSeconds > 1.0) return $" {time.TotalSeconds} sec";
             var ms = time.TotalMilliseconds;
             return ms > 1.0 ? $" {ms} ms" : $" {ms*1000.0} us";
+        }
+
+        private void buttonTriggered_Click(object sender, EventArgs e)
+        {
+            _newport.ResetMeasurement();
+            _newport.TriggeredMeasurement(true,0,5.0);
+            updateButtonState(true);
+        }
+
+        private void updateButtonState(bool measuring)
+        {
+            buttonAbort.Enabled = measuring;
+            buttonContinuous.Enabled = !measuring;
+            buttonTriggered.Enabled = !measuring;
+        }
+
+        private void buttonAbort_Click(object sender, EventArgs e)
+        {
+            _newport.ResetMeasurement();
+            updateButtonState(false);
         }
     }
 }
