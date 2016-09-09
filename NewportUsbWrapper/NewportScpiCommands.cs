@@ -77,6 +77,10 @@ namespace Newport.Usb
         public static string DataStoreClear => "PM:DS:CLEAR\r";
         public static string DataStoreCountQuery => "PM:DS:COUNT?\r";
 
+        public static string DataStoreGetSample(uint index) => $"PM:DS:GET? {index}\r";
+        public static string DataStoreGetLatest(uint samples) => $"PM:DS:GET? +{samples}\r";
+        public static string DataStoreGetOldest(uint samples) => $"PM:DS:GET? -{samples}\r";
+        public static string DataStoreGetRange(uint start, uint end) => $"PM:DS:GET? +{start-end}\r";
         /// <summary>
         /// Data Store buffer behavior selection. 0=Fixed size buffer, 1=ring buffer
         /// </summary>

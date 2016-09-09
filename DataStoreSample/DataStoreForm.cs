@@ -42,21 +42,23 @@ namespace DataStoreSample
         /// <summary>
         /// This method attempts to connect to the devices attached via USB cable.
         /// </summary>
-        private void ConnectDevices()
+        private bool ConnectDevices()
         {
+            if (_connected) return _connected;
             try
             {
                 _connected = _newport != null && _newport.Connect();
 
                 if (!_connected)
                 {
-                    MessageBox.Show("Could not establish communication with the power meter.", "Connect",  MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Could not establish communication with the power meter.", "Connect", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
             {   // Display the exception message
                 MessageBox.Show($"Could not establish communication with the power meter.\n{ex.Message}", "Connect Exception", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            return _connected;
         }
 
         /// <summary>
@@ -64,20 +66,11 @@ namespace DataStoreSample
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void OnClick_buttonGet(object sender, EventArgs e)
+        private void ButtonGet_OnClick(object sender, EventArgs e)
         {
+            if (!ConnectDevices()) { return; } // device not connected...
             try
-            {
-                // If the devices are not connected
-                if (!_connected)
-                {   // Attempt to connect the devices
-                    ConnectDevices();
-                }
-
-                // If the devices are not connected
-                if (!_connected) {  return; }
-
-                // Get the sample size from the edit box on the form
+            {   // Get the sample size from the edit box on the form
                 var nSampleSize = GetSampleSize();
 
                 // If the sample size is not valid
@@ -87,28 +80,6 @@ namespace DataStoreSample
 
                 var status = _newport.DatastoreInitialize(true, false, PowermeterMode.DcContinuous, nSampleSize, 1);
 
-                //var status = _newport.Write(NewportScpiCommands.DataStoreBuffer(false));
-
-                //if (string.IsNullOrEmpty(status))
-                //{
-                //    status = _newport.Write(NewportScpiCommands.DataStoreClear);
-                //}
-
-                //if (string.IsNullOrEmpty(status))
-                //{
-                //    status = _newport.Write(NewportScpiCommands.DataStoreInterval(1));
-                //}
-
-                //if (string.IsNullOrEmpty(status))
-                //{
-                //    status = _newport.Write(NewportScpiCommands.DataStoreSize(nSampleSize));
-                //}
-
-                //if (string.IsNullOrEmpty(status))
-                //{
-                //    _newport.Flush();
-                //    status = _newport.Write(NewportScpiCommands.DataStoreEnable);
-                //}
                 uint nSamples = 0;
                 if (string.IsNullOrEmpty(status))
                 {
@@ -146,15 +117,9 @@ namespace DataStoreSample
 
         private void buttonContinuous_Click(object sender, EventArgs e)
         {
+            if (!ConnectDevices()) { return; } // device not connected...
             try
-            {
-                // Connect if the device is not connected
-                if (!_connected) ConnectDevices();
-
-                // If the devices are not connected
-                if (!_connected) { return; }
-
-                // Get the sample size from the edit box on the form
+            {   // Get the sample size from the edit box on the form
                 var nSampleSize = GetSampleSize();
 
                 // If the sample size is not valid
@@ -288,7 +253,7 @@ namespace DataStoreSample
         private void buttonTriggered_Click(object sender, EventArgs e)
         {
             _newport.ResetMeasurement();
-            _newport.TriggeredMeasurement(true,0,5.0);
+            _newport.TriggeredMeasurement(true,0,5.0,TriggerStartEvent.SoftKey);
             updateButtonState(true);
         }
 

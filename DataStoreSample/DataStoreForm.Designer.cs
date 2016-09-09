@@ -68,7 +68,7 @@ namespace DataStoreSample
             this.btnGet.TabIndex = 2;
             this.btnGet.Text = "DS:Get?";
             this.btnGet.UseVisualStyleBackColor = true;
-            this.btnGet.Click += new System.EventHandler(this.OnClick_buttonGet);
+            this.btnGet.Click += new System.EventHandler(this.ButtonGet_OnClick);
             // 
             // lblResponse
             // 

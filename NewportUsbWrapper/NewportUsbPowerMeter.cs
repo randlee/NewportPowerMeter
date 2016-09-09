@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
+using System.Runtime.CompilerServices;
+
 using Newport.USBComm;
 
 namespace Newport.Usb
@@ -23,11 +25,6 @@ namespace Newport.Usb
         /// DeviceKey used to communicate with Newport device
         /// </summary>
         private string _deviceKey = null;
-
-        /// <summary>
-        /// The maximum string length for an I/O transfer.
-        /// </summary>
-        private const int maxTransferLength = 64;
 
         public const string END_OF_HEADER = "End of Header\r\n";
         public const string END_OF_DATA = "End of Data";
@@ -105,9 +102,7 @@ namespace Newport.Usb
             if (_usb == null) return;
             string response;
             int status;
-            while (TryRead(out response, out status))
-            {
-            }
+            while (TryRead(out response, out status))  { }
         }
 
         /// <summary>
@@ -120,19 +115,29 @@ namespace Newport.Usb
             try
             {
                 var nIOStatus = USB.m_knUSBAddrNotFound;
-                if (_usb != null)
-                {
-                    Debug.WriteLine(command);
-                    if (_deviceID > 0) nIOStatus = _usb.Write(_deviceID, command);
-                    else if (!string.IsNullOrEmpty(_deviceKey)) nIOStatus = _usb.Write(_deviceKey, command);
-                }
+                if (_usb == null) return ErrorString(USB.m_knWDDeviceNotFound,"Write");
+                Debug.WriteLine(command);
+                if (_deviceID > 0) nIOStatus = _usb.Write(_deviceID, command);
+                else if (!string.IsNullOrEmpty(_deviceKey)) nIOStatus = _usb.Write(_deviceKey, command);
                 // If no error status
-                return nIOStatus == 0 ? string.Empty : $"Write Error Code = {nIOStatus}, 0x{nIOStatus.ToString("X")}";
+                return ErrorString(nIOStatus,"Write");
             }
             catch (Exception ex)
             {
                 return $"Could not send the specified command.\r\n{ex.Message}";
             }
+        }
+
+#if true // .net 4.5.2 or greater
+        private static string ErrorString(int nIOStatus, [CallerMemberName] string callingMemberName = null)
+#else
+        private static string ErrorString(int nIOStatus, string callingMemberName)
+#endif
+        {
+            if (nIOStatus == 0) return string.Empty;
+            var response = $"{callingMemberName} Error Code = {nIOStatus}, 0x{nIOStatus.ToString("X")}";
+            Debug.WriteLine(response);
+            return response;
         }
 
         /// <summary>
@@ -143,23 +148,22 @@ namespace Newport.Usb
         {
             try
             {
+                if (_usb == null) return ErrorString(USB.m_knUSBAddrNotFound);
                 var nIOStatus = USB.m_knUSBAddrNotFound;
-                if (_usb != null)
-                {
-                    // The firmware limits the transfer size to the maximum packet size of 64 bytes
-                    var sbResponse = new StringBuilder(64);
-                    if (_deviceID > 0) nIOStatus = _usb.Read(_deviceID, sbResponse);
-                    else if (!string.IsNullOrEmpty(_deviceKey)) nIOStatus = _usb.Read(_deviceKey, sbResponse);
 
-                    if (nIOStatus == 0)
-                    {
-                        var response = sbResponse.ToString();
-                        Debug.WriteLine($"[{response.Length}] '{response}'");
-                        return response;
-                    }
+                // The firmware limits the transfer size to the maximum packet size of 64 bytes
+                var sbResponse = new StringBuilder(64);
+                if (_deviceID > 0) nIOStatus = _usb.Read(_deviceID, sbResponse);
+                else if (!string.IsNullOrEmpty(_deviceKey)) nIOStatus = _usb.Read(_deviceKey, sbResponse);
+
+                if (nIOStatus == 0)
+                {
+                    var response = sbResponse.ToString();
+                    Debug.WriteLine($"[{response.Length}] '{response}'");
+                    return response;
                 }
 
-                return $"Read Error Code = {nIOStatus}, 0x{nIOStatus.ToString("X")}";
+                return ErrorString(nIOStatus);
             }
             catch (Exception ex)
             {
@@ -170,26 +174,30 @@ namespace Newport.Usb
         public bool TryRead(out string response, out int ioStatus)
         {
             ioStatus = USB.m_knUSBAddrNotFound;
-            try
+            if (_usb != null)
             {
-                var sbResponse = new StringBuilder(64);
-                if (_usb != null)
+                try
                 {
+                    var sbResponse = new StringBuilder(64);
                     if (_deviceID > 0) ioStatus = _usb.Read(_deviceID, sbResponse);
                     else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = _usb.Read(_deviceKey, sbResponse);
+                    if (ioStatus == 0)
+                    {
+                        response = sbResponse.ToString();
+                        return true;
+                    }
+                    response = ErrorString(ioStatus);
                 }
-                if (ioStatus == 0)
+                catch (Exception ex)
                 {
-                    response = sbResponse.ToString();
-                    return true;
+                    response = $"Could not read the command response.\r\n{ex.Message}";
                 }
-                response = $"TryRead Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}";
             }
-            catch (Exception ex)
+            else
             {
-                response = $"Could not read the command response.\r\n{ex.Message}";
+                response = ErrorString(USB.m_knUSBAddrNotFound);
             }
-            Debug.WriteLine(response);
+
             return false;
         }
 
@@ -204,21 +212,19 @@ namespace Newport.Usb
                 {
                     if (_deviceID > 0) ioStatus = _usb.ReadBinary(_deviceID, sbResponse);
                     else if (!string.IsNullOrEmpty(_deviceKey)) ioStatus = _usb.ReadBinary(_deviceKey, sbResponse);
+
+                    if (ioStatus == 0)
+                    {
+                        response = sbResponse.ToString();
+                        return true;
+                    }
                 }
-                if (ioStatus == 0)
-                {
-                    response = sbResponse.ToString();
-//                    Debug.WriteLine($"Read {response.Length} bytes");
-//                    Debug.WriteLine($"[{response.Length}] '{response}'");
-                    return true;
-                }
-                response = $"TryReadBinary Error Code = {ioStatus}, 0x{ioStatus.ToString("X")}";
+                response = ErrorString(ioStatus);
             }
             catch (Exception ex)
             {
                 response = $"Could not read the command response.\r\n{ex.Message}";
             }
-            Debug.WriteLine(response);
             return false;
         }
         
@@ -228,8 +234,8 @@ namespace Newport.Usb
             try
             {
                 // The firmware limits the transfer size to the maximum packet size of 64 bytes
-                int readCount=0;
-                DateTime start = DateTime.Now;
+                var readCount=0;
+                var start = DateTime.Now;
                 var sbResponse = new StringBuilder((int)expectedLength);
                 if (_usb != null)
                 {
@@ -393,32 +399,59 @@ namespace Newport.Usb
         {
             data = new List<double>((int)sampleCount);
             var status = -1;
-
+            var errorString = Write(NewportScpiCommands.DataStoreGetLatest(sampleCount));
+            if(string.IsNullOrEmpty(errorString))
             {
-                Write($"pm:ds:get? +{sampleCount}\r");
-                string receivedString;
-                {
-                    // Read header....
-                    string response;
-                    if (!ReadBinaryUntil(NewportUsbPowerMeter.END_OF_HEADER, 1024, out response, out status))
-                        return status;
-
-                    // Copy remaining data (after 'End Of Header'), which is actual data, to receive buffer. 
-                    var markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_HEADER, StringComparison.Ordinal) +
-                                      NewportUsbPowerMeter.END_OF_HEADER.Length;
-
-                    receivedString = response.Substring(markerIndex);
-                }
-                // Read remaining data
-                List<double> rxData=null;
-                if (!ReadDataUntil(NewportUsbPowerMeter.END_OF_DATA, sampleCount, receivedString, out status, out rxData)) return status;
+                if (ReadDataStorePacket(sampleCount, ref data, ref status)) return status;
             }
             return status;
         }
 
+        public int ReadDataStoreValues(uint start, uint end, out List<double> data)
+        {
+            Debug.Assert(end > start);
+            var sampleCount = end - start;
+            data = new List<double>((int)(sampleCount));
+            var status = -1;
+
+            data = new List<double>((int)sampleCount);
+
+            var errorString = Write(NewportScpiCommands.DataStoreGetRange(start, end));
+            if (string.IsNullOrEmpty(errorString))
+            {
+                if (ReadDataStorePacket(sampleCount, ref data, ref status)) return status;
+            }
+            return status;
+        }
+
+        private bool ReadDataStorePacket(uint sampleCount, ref List<double> data, ref int status)
+        {
+
+            string receivedString;
+            {
+                // Read header....
+                string response;
+                if (!ReadBinaryUntil(NewportUsbPowerMeter.END_OF_HEADER, 1024, out response, out status))
+                    return true;
+
+                // Copy remaining data (after 'End Of Header'), which is actual data, to receive buffer. 
+                var markerIndex = response.IndexOf(NewportUsbPowerMeter.END_OF_HEADER, StringComparison.Ordinal) +
+                                  NewportUsbPowerMeter.END_OF_HEADER.Length;
+
+                receivedString = response.Substring(markerIndex);
+            }
+            // Read remaining data
+            //List<double> rxData=null;
+            if (!ReadDataUntil(NewportUsbPowerMeter.END_OF_DATA, sampleCount, receivedString, out status, out data))
+                return true;
+            return false;
+        }
+
+
+
         private int DisplayDeviceTable()
         {
-            var hashTable = _usb.GetDeviceTable();
+            var hashTable = _usb?.GetDeviceTable();
 
             if (hashTable != null)
             {
@@ -437,7 +470,7 @@ namespace Newport.Usb
 
         private int DisplayDeviceInfo()
         {
-            var devices = _usb.GetDevInfoList();
+            var devices = _usb?.GetDevInfoList();
             if (devices != null)
             {
                 Debug.WriteLine($"{devices.Count} devices in DevInfoList");
@@ -454,31 +487,6 @@ namespace Newport.Usb
 
         public string ContinuousMeasurementSetup()
         {
-            //var status = Write(NewportScpiCommands.DataStoreBuffer(0));
-
-            //if (string.IsNullOrEmpty(status))
-            //{
-            //    status = Write(NewportScpiCommands.DataStoreClear);
-            //}
-
-            //if (string.IsNullOrEmpty(status))
-            //{
-            //    status = Write(NewportScpiCommands.DataStoreInterval(1));
-            //}
-
-            //if (string.IsNullOrEmpty(status))
-            //{
-            //    status = Write(NewportScpiCommands.DataStoreSize(250000));
-            //}
-            //if (string.IsNullOrEmpty(status))
-            //{
-            //    status = Write(NewportScpiCommands.Mode(PowermeterMode.DcContinuous));
-            //}
-            //if (string.IsNullOrEmpty(status))
-            //{
-            //    Flush();
-            //    status = Write(NewportScpiCommands.DataStoreEnable);
-            //}
             return DatastoreInitialize(true,true,PowermeterMode.DcContinuous,250000,1);
         }
 
@@ -548,10 +556,11 @@ namespace Newport.Usb
 
         private void WaitForTrigger()
         {
+            var start = DateTime.Now;
             var triggered = 0;
-
+            Debug.WriteLine("Waiting for trigger...");
             // Repeat until an error occurs
-            while (triggered == 0)
+            while (triggered == 0 && Measuring)
             {// Query the trigger state
                 var writeResponse = Write(NewportScpiCommands.TriggerStateQuery);
 
@@ -559,17 +568,21 @@ namespace Newport.Usb
                 {
                     // Read the sample count
                     string response;
-                    if (TryRead(out response, out triggered))
+                    int ioStatus;
+                    if (TryRead(out response, out ioStatus))
                     {
-                        if (triggered > 0) { break; }
+                        triggered = int.Parse(response);
+                        Debug.WriteLine($"{triggered} - {(DateTime.Now - start).TotalSeconds}");
+                        if (triggered > 0) { return; }
                     }
                 }
                 else
                 {
                     Debug.WriteLine($"WaitForTrigger Error response '{writeResponse}'");
                 }
-                Thread.Sleep(50);
+                Thread.Sleep(1000);
             }
+            Debug.WriteLine($"Triggered {(DateTime.Now - start).TotalSeconds}");
         }
 
         public void TriggeredMeasurement(bool risingEdge, 
@@ -586,23 +599,7 @@ namespace Newport.Usb
             ThreadPool.QueueUserWorkItem(RunTriggeredMeasurementTask, null);
         }
 
-        private void TriggerInitialize(bool enable, bool risingEdge, 
-                                        uint channel=0,
-                                        double duration = 5.0, 
-                                        TriggerStartEvent startEvent = TriggerStartEvent.ExternalTrigger, 
-                                        TriggerStopEvent stopEvent = TriggerStopEvent.StopAfterTime, 
-                                        uint holdoffMs = 0)
-        {
-            Write(NewportScpiCommands.TriggerDisable);
-            Write(NewportScpiCommands.TriggerHoldoff(holdoffMs));
-            Write(NewportScpiCommands.TriggerEdge(risingEdge));
-            Write(NewportScpiCommands.TriggerStartEvent(startEvent));
-            Write(NewportScpiCommands.TriggerStopEvent(stopEvent));
-            Write(NewportScpiCommands.TriggerTime((uint) (duration*1000)));
 
-            Write(NewportScpiCommands.TriggerStateArm);
-            if(enable) Write(NewportScpiCommands.TriggerEnable(channel));
-        }
 
         public void ResetMeasurement()
         {
@@ -626,6 +623,24 @@ namespace Newport.Usb
             if (string.IsNullOrEmpty(result))   result = Write(NewportScpiCommands.Mode(mode));
             if(string.IsNullOrEmpty(result) && enable) result = Write(NewportScpiCommands.DataStoreEnable);
             return result;
+        }
+
+        private void TriggerInitialize(bool enable, bool risingEdge,
+                                uint channel = 0,
+                                double duration = 5.0,
+                                TriggerStartEvent startEvent = TriggerStartEvent.ExternalTrigger,
+                                TriggerStopEvent stopEvent = TriggerStopEvent.StopAfterTime,
+                                uint holdoffMs = 0)
+        {
+            Write(NewportScpiCommands.TriggerDisable);
+            Write(NewportScpiCommands.TriggerHoldoff(holdoffMs));
+            Write(NewportScpiCommands.TriggerEdge(risingEdge));
+            Write(NewportScpiCommands.TriggerStartEvent(startEvent));
+            Write(NewportScpiCommands.TriggerStopEvent(stopEvent));
+            Write(NewportScpiCommands.TriggerTime((uint)(duration * 1000)));
+
+            Write(NewportScpiCommands.TriggerStateArm);
+            if (enable) Write(NewportScpiCommands.TriggerEnable(channel));
         }
     }
 }
