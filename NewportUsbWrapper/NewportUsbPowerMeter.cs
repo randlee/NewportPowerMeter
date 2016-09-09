@@ -356,7 +356,7 @@ namespace Newport.Usb
         /// or until a timeout occurs.
         /// </summary>
         /// <param name="samplesRequested">The sample size that the sample count should match.</param>
-        /// <returns>The sample count.</returns>
+        /// <returns>The number of samples ready for read.</returns>
         public uint WaitForDataStore(uint samplesRequested)
         {
             uint samplesReady = 0;
@@ -411,7 +411,7 @@ namespace Newport.Usb
         {
             Debug.Assert(end > start);
             var sampleCount = end - start;
-            data = new List<double>((int)(sampleCount));
+            //data = new List<double>((int)(sampleCount));
             var status = -1;
 
             data = new List<double>((int)sampleCount);
@@ -537,21 +537,33 @@ namespace Newport.Usb
         {
             SamplesRead = 0;
             Measuring = true;
+            uint startIndex=1;
+
             WaitForTrigger();
             while (Measuring)
             {
                 var samples = _samples;
                 if (samples <= 0) break;
-
-                var samplesReady = WaitForDataStore(samples);
-                if (samplesReady >= samples)
+                var samplesRequested = Math.Min(startIndex+1000, _samples);
+                var endIndex = WaitForDataStore(samplesRequested);
+                if (true)   //samplesReady >= samples)
                 {
                     List<double> result;
-                    ReadDataStoreValues(samples, out result);
+                    var numberRead = ReadDataStoreValues(startIndex,endIndex, out result);
+                    if(numberRead < 0)
+                    {
+                        Debug.WriteLine($"Error reading triggered measurement [{startIndex},{endIndex}]");
+                        Debug.WriteLine(ErrorString(numberRead));
+                        break;
+                    }
                     SamplesRead += result.Count;
                     ContinuousData?.Invoke(result);
+
+                    if (endIndex >= _samples) break;
+                    startIndex += (uint)result.Count;
                 }
             }
+            Measuring = false;
         }
 
         private void WaitForTrigger()

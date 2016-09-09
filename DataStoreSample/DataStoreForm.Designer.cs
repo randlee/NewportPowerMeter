@@ -87,7 +87,7 @@ namespace DataStoreSample
             this.rtbResponse.Margin = new System.Windows.Forms.Padding(6);
             this.rtbResponse.Name = "rtbResponse";
             this.rtbResponse.ReadOnly = true;
-            this.rtbResponse.Size = new System.Drawing.Size(384, 73);
+            this.rtbResponse.Size = new System.Drawing.Size(664, 355);
             this.rtbResponse.TabIndex = 8;
             this.rtbResponse.TabStop = false;
             this.rtbResponse.Text = "";
@@ -95,7 +95,7 @@ namespace DataStoreSample
             // lblTime
             // 
             this.lblTime.AutoSize = true;
-            this.lblTime.Location = new System.Drawing.Point(24, 173);
+            this.lblTime.Location = new System.Drawing.Point(24, 452);
             this.lblTime.Margin = new System.Windows.Forms.Padding(6, 0, 6, 0);
             this.lblTime.Name = "lblTime";
             this.lblTime.Size = new System.Drawing.Size(65, 25);
@@ -105,17 +105,17 @@ namespace DataStoreSample
             // txtTime
             // 
             this.txtTime.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.txtTime.Location = new System.Drawing.Point(172, 171);
+            this.txtTime.Location = new System.Drawing.Point(172, 450);
             this.txtTime.Margin = new System.Windows.Forms.Padding(6);
             this.txtTime.Name = "txtTime";
             this.txtTime.ReadOnly = true;
-            this.txtTime.Size = new System.Drawing.Size(384, 31);
+            this.txtTime.Size = new System.Drawing.Size(664, 31);
             this.txtTime.TabIndex = 16;
             this.txtTime.TabStop = false;
             // 
             // buttonContinuous
             // 
-            this.buttonContinuous.Location = new System.Drawing.Point(601, 23);
+            this.buttonContinuous.Location = new System.Drawing.Point(867, 29);
             this.buttonContinuous.Margin = new System.Windows.Forms.Padding(6);
             this.buttonContinuous.Name = "buttonContinuous";
             this.buttonContinuous.Size = new System.Drawing.Size(150, 44);
@@ -127,7 +127,7 @@ namespace DataStoreSample
             // buttonAbort
             // 
             this.buttonAbort.Enabled = false;
-            this.buttonAbort.Location = new System.Drawing.Point(601, 171);
+            this.buttonAbort.Location = new System.Drawing.Point(867, 177);
             this.buttonAbort.Margin = new System.Windows.Forms.Padding(6);
             this.buttonAbort.Name = "buttonAbort";
             this.buttonAbort.Size = new System.Drawing.Size(150, 44);
@@ -138,7 +138,7 @@ namespace DataStoreSample
             // 
             // buttonTriggered
             // 
-            this.buttonTriggered.Location = new System.Drawing.Point(601, 97);
+            this.buttonTriggered.Location = new System.Drawing.Point(867, 103);
             this.buttonTriggered.Margin = new System.Windows.Forms.Padding(6);
             this.buttonTriggered.Name = "buttonTriggered";
             this.buttonTriggered.Size = new System.Drawing.Size(150, 44);
@@ -151,7 +151,7 @@ namespace DataStoreSample
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(841, 222);
+            this.ClientSize = new System.Drawing.Size(1061, 496);
             this.Controls.Add(this.buttonTriggered);
             this.Controls.Add(this.buttonAbort);
             this.Controls.Add(this.buttonContinuous);

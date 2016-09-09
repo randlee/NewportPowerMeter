@@ -140,22 +140,39 @@ namespace DataStoreSample
                 }
             }
             catch (Exception ex)
-            {
-                // Display the exception message
+            { // Display the exception message
                 MessageBox.Show($"Could not complete the DS:GET? query.\n{ex.Message}", "DS:GET?", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-
+        private void buttonTriggered_Click(object sender, EventArgs e)
+        {
+            if (!ConnectDevices()) { return; } // device not connected...
+            try
+            {
+                rtbResponse.Text = "";
+                // Get the sample size from the edit box on the form
+                var nSampleSize = GetSampleSize();
+                _newport.ResetMeasurement();
+                _newport.TriggeredMeasurement(true, 0, nSampleSize/10000.0, TriggerStartEvent.SoftKey);
+                updateButtonState(true);
+            }
+            catch(Exception ex)
+            {   // Display the exception message
+                MessageBox.Show($"Could not complete the DS:GET? query.\n{ex.Message}", "DS:GET?", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
         private void _newport_ContinuousData(List<double> obj)
         {
-            var displayText = $"{DateTime.Now} Rx {obj.Count}/{_newport.SamplesRead}";
             if (rtbResponse.InvokeRequired)
             {
-                BeginInvoke(new Action(() => rtbResponse.Text = displayText) , null);
+                BeginInvoke(new Action(() => _newport_ContinuousData(obj)) , null);
                 return;
             }
+            var displayText = rtbResponse.Text;
+            if (!string.IsNullOrEmpty(displayText)) displayText += $"\r\n{DateTime.Now} Rx {obj.Count}/{_newport.SamplesRead}";
+            else displayText = $"{DateTime.Now} Rx {obj.Count}/{_newport.SamplesRead}";
             rtbResponse.Text = displayText;
         }
 
@@ -250,12 +267,7 @@ namespace DataStoreSample
             return ms > 1.0 ? $" {ms} ms" : $" {ms*1000.0} us";
         }
 
-        private void buttonTriggered_Click(object sender, EventArgs e)
-        {
-            _newport.ResetMeasurement();
-            _newport.TriggeredMeasurement(true,0,5.0,TriggerStartEvent.SoftKey);
-            updateButtonState(true);
-        }
+
 
         private void updateButtonState(bool measuring)
         {
