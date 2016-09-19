@@ -367,7 +367,7 @@ namespace Newport.Usb
             while (nStatus == 0)
             {
                 // Query the sample count
-                var writeResponse = Write(NewportScpiCommands.DataStoreCountQuery);
+                var writeResponse = Write(NewportScpi.DataStoreCountQuery);
 
                 if (string.IsNullOrEmpty(writeResponse))
                 {
@@ -399,7 +399,7 @@ namespace Newport.Usb
         {
             data = new List<double>((int)sampleCount);
             var status = -1;
-            var errorString = Write(NewportScpiCommands.DataStoreGetLatest(sampleCount));
+            var errorString = Write(NewportScpi.DataStoreGetLatest(sampleCount));
             if(string.IsNullOrEmpty(errorString))
             {
                 if (ReadDataStorePacket(sampleCount, ref data, ref status)) return status;
@@ -416,7 +416,7 @@ namespace Newport.Usb
 
             data = new List<double>((int)sampleCount);
 
-            var errorString = Write(NewportScpiCommands.DataStoreGetRange(start, end));
+            var errorString = Write(NewportScpi.DataStoreGetRange(start, end));
             if (string.IsNullOrEmpty(errorString))
             {
                 if (ReadDataStorePacket(sampleCount, ref data, ref status)) return status;
@@ -574,7 +574,7 @@ namespace Newport.Usb
             // Repeat until an error occurs
             while (triggered == 0 && Measuring)
             {// Query the trigger state
-                var writeResponse = Write(NewportScpiCommands.TriggerStateQuery);
+                var writeResponse = Write(NewportScpi.TriggerStateQuery);
 
                 if (string.IsNullOrEmpty(writeResponse))
                 {
@@ -620,20 +620,20 @@ namespace Newport.Usb
             if (measuring) Thread.Sleep(50);
 
             Flush();
-            Write(NewportScpiCommands.TriggerDisable);
+            Write(NewportScpi.TriggerDisable);
             DatastoreInitialize(false, true);
             TriggerInitialize(false,true,0,0.0,TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,0);
         }
 
         public string DatastoreInitialize(bool enable, bool ringBuffer, PowermeterMode mode= PowermeterMode.DcContinuous, uint datastoreSize=250000, uint datastoreInterval = 1)
         {
-            var result = Write(NewportScpiCommands.DataStoreDisable);
-            if(string.IsNullOrEmpty(result))    result = Write(NewportScpiCommands.DataStoreBuffer(ringBuffer));
-            if (string.IsNullOrEmpty(result))   result = Write(NewportScpiCommands.DataStoreClear);
-            if (string.IsNullOrEmpty(result))   result = Write(NewportScpiCommands.DataStoreInterval(datastoreInterval));
-            if (string.IsNullOrEmpty(result))   result = Write(NewportScpiCommands.DataStoreSize(datastoreSize));
-            if (string.IsNullOrEmpty(result))   result = Write(NewportScpiCommands.Mode(mode));
-            if(string.IsNullOrEmpty(result) && enable) result = Write(NewportScpiCommands.DataStoreEnable);
+            var result = Write(NewportScpi.DataStoreDisable);
+            if(string.IsNullOrEmpty(result))    result = Write(NewportScpi.DataStoreBuffer(ringBuffer));
+            if (string.IsNullOrEmpty(result))   result = Write(NewportScpi.DataStoreClear);
+            if (string.IsNullOrEmpty(result))   result = Write(NewportScpi.DataStoreInterval(datastoreInterval));
+            if (string.IsNullOrEmpty(result))   result = Write(NewportScpi.DataStoreSize(datastoreSize));
+            if (string.IsNullOrEmpty(result))   result = Write(NewportScpi.Mode(mode));
+            if(string.IsNullOrEmpty(result) && enable) result = Write(NewportScpi.DataStoreEnable);
             return result;
         }
 
@@ -644,15 +644,15 @@ namespace Newport.Usb
                                 TriggerStopEvent stopEvent = TriggerStopEvent.StopAfterTime,
                                 uint holdoffMs = 0)
         {
-            Write(NewportScpiCommands.TriggerDisable);
-            Write(NewportScpiCommands.TriggerHoldoff(holdoffMs));
-            Write(NewportScpiCommands.TriggerEdge(risingEdge));
-            Write(NewportScpiCommands.TriggerStartEvent(startEvent));
-            Write(NewportScpiCommands.TriggerStopEvent(stopEvent));
-            Write(NewportScpiCommands.TriggerTime((uint)(duration * 1000)));
+            Write(NewportScpi.TriggerDisable);
+            Write(NewportScpi.TriggerHoldoff(holdoffMs));
+            Write(NewportScpi.TriggerEdge(risingEdge));
+            Write(NewportScpi.TriggerStartEvent(startEvent));
+            Write(NewportScpi.TriggerStopEvent(stopEvent));
+            Write(NewportScpi.TriggerTime((uint)(duration * 1000)));
 
-            Write(NewportScpiCommands.TriggerStateArm);
-            if (enable) Write(NewportScpiCommands.TriggerEnable(channel));
+            Write(NewportScpi.TriggerStateArm);
+            if (enable) Write(NewportScpi.TriggerEnable(channel));
         }
     }
 }

@@ -84,7 +84,7 @@ namespace DataStoreSample
                 if (string.IsNullOrEmpty(status))
                 {
                     nSamples = _newport.WaitForDataStore(nSampleSize);
-                    status = _newport.Write(NewportScpiCommands.DataStoreDisable);
+                    status = _newport.Write(NewportScpi.DataStoreDisable);
                     rtbResponse.Text = $"Samples = {nSamples}";
                     rtbResponse.Update();
                 }

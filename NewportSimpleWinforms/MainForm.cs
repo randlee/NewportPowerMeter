@@ -49,7 +49,7 @@ namespace Visyn.Newport
                 if (connected)
                 {
                     txtCmd.Focus();
-                    txtCmd.Text = NewportScpiCommands.Identity;
+                    txtCmd.Text = NewportScpi.Identity;
                     OnSend(this,null);
                     OnRead(this,null);
                 }
