@@ -78,6 +78,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CaptureMode.cs" />
+    <Compile Include="NewportMeasurementSettings.cs" />
     <Compile Include="NewportScpi.cs" />
     <Compile Include="NewportUsbPowerMeter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

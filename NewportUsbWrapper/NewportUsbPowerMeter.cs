@@ -25,11 +25,23 @@ namespace Newport.Usb
         /// DeviceKey used to communicate with Newport device
         /// </summary>
         private string _deviceKey = null;
-
+		
+        public const uint DATASTORE_SIZE_MAX = 250000;
         public const string END_OF_HEADER = "End of Header\r\n";
         public const string END_OF_DATA = "End of Data";
 
-        public bool Measuring { get; protected set; }
+        private bool _measuring;
+
+        public bool Measuring
+        {
+            get { return _measuring; }
+            protected set
+            {
+                if (_measuring == value) return;
+                _measuring = value;
+                MeasuringChanged?.Invoke(_measuring);
+            }
+        }
 
         public NewportUsbPowerMeter()
         {
@@ -82,6 +94,7 @@ namespace Newport.Usb
                     if (!string.IsNullOrEmpty(_deviceKey)) break;
                 }
                 Flush();
+                ResetMeasurement();
             }
 #endif
             return open;
@@ -386,7 +399,16 @@ namespace Newport.Usb
                 }
                 else
                 {
-                    Debug.WriteLine($"Error response '{writeResponse}'");
+                    Debug.WriteLine($"{NewportScpi.DataStoreCountQuery} Error response '{writeResponse}'");
+                    Write(NewportScpi.DataStoreEnableQuery);
+                    if(TryRead(out writeResponse,out nStatus))
+                    {
+                        Debug.WriteLine($"{NewportScpi.DataStoreEnableQuery} {writeResponse}");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"{NewportScpi.DataStoreEnableQuery} Error response '{writeResponse}'");
+                    }
                 }
                 Thread.Sleep(10);
             }
@@ -487,18 +509,18 @@ namespace Newport.Usb
 
         public string ContinuousMeasurementSetup()
         {
-            return DatastoreInitialize(true,true,PowermeterMode.DcContinuous,250000,1);
+            return DatastoreInitialize(true,NewportMeasurementSettings.ContiuousMeasurement(0,1));
         }
 
         private uint _samples = 0;
         public void ContinuousReading(uint samples)
         {
-            if (samples == _samples) return;
-            if (_samples > 0)
-            {   // already running
-                _samples = samples;
-            }
-            else
+            //if (samples == _samples) return;
+            //if (_samples > 0)
+            //{   // already running
+            //    _samples = samples;
+            //}
+            //else
             {   // Not currently running
                 if (samples == 0) return;
                 _samples = samples;
@@ -509,6 +531,7 @@ namespace Newport.Usb
 
 
         public virtual event Action<List<double>> ContinuousData;
+        public virtual event Action<bool> MeasuringChanged;
         public int SamplesRead { get; private set; }
 
         protected virtual void RunContinuousTask(object unused)
@@ -519,7 +542,7 @@ namespace Newport.Usb
             {
                 var samples = _samples;
                 if (samples <= 0) break;
-                Flush();
+ //               Flush();
 //                WaitForDataStore(samples);
 
                 var samplesReady = WaitForDataStore(samples);
@@ -531,6 +554,7 @@ namespace Newport.Usb
                     ContinuousData?.Invoke(result);
                 }
             }
+            Measuring = false;
         }
 
         protected virtual void RunTriggeredMeasurementTask(object unused)
@@ -539,7 +563,7 @@ namespace Newport.Usb
             Measuring = true;
             uint startIndex=1;
 
-            WaitForTrigger();
+            WaitForTrigger(Math.Min(_samples + 1000, _samples));
             while (Measuring)
             {
                 var samples = _samples;
@@ -566,7 +590,7 @@ namespace Newport.Usb
             Measuring = false;
         }
 
-        private void WaitForTrigger()
+        private void WaitForTrigger(uint minSamples)
         {
             var start = DateTime.Now;
             var triggered = 0;
@@ -586,6 +610,16 @@ namespace Newport.Usb
                         triggered = int.Parse(response);
                         Debug.WriteLine($"{triggered} - {(DateTime.Now - start).TotalSeconds}");
                         if (triggered > 0) { return; }
+                        Write(NewportScpi.DataStoreCountQuery);
+                        if(TryRead(out response,out ioStatus))
+                        {
+                            Debug.WriteLine($"{response} samples in buffer");
+                            uint samplesReady;
+                            if (uint.TryParse(response, out samplesReady))
+                            {
+                                if (samplesReady >= minSamples)  return;
+                            }
+                        }
                     }
                 }
                 else
@@ -599,15 +633,17 @@ namespace Newport.Usb
 
         public void TriggeredMeasurement(bool risingEdge, 
                                             uint channel=0,
-                                            double duration=5.0, 
+                                            double durationSeconds=5.0, 
                                             TriggerStartEvent startEvent=TriggerStartEvent.ExternalTrigger, 
                                             TriggerStopEvent stopEvent=TriggerStopEvent.StopAfterTime, 
-                                            uint holdoffMs=0)
+                                            uint holdoffSeconds=0)
         {
             Flush();
-            DatastoreInitialize(true, true, PowermeterMode.DcContinuous);
-            TriggerInitialize(true, risingEdge,0, duration, startEvent, stopEvent, holdoffMs);
-            _samples = (uint)(duration*10000.0);
+  //          DatastoreInitialize(true, true, CaptureMode.DC_CONTINUOUS);
+            DatastoreInitialize(false,new NewportMeasurementSettings(channel, startEvent, stopEvent, risingEdge, CaptureMode.DC_CONTINUOUS, 1,holdoffSeconds));
+   //         TriggerInitialize(true, risingEdge,0, durationSeconds, startEvent, stopEvent, holdoffSeconds);
+            TriggerInitialize(true,new NewportMeasurementSettings(channel,startEvent,stopEvent,true,CaptureMode.DC_CONTINUOUS,durationSeconds,holdoffSeconds));
+            _samples = (uint)(durationSeconds*10000.0);
             ThreadPool.QueueUserWorkItem(RunTriggeredMeasurementTask, null);
         }
 
@@ -620,12 +656,18 @@ namespace Newport.Usb
             if (measuring) Thread.Sleep(50);
 
             Flush();
-            Write(NewportScpi.TriggerDisable);
-            DatastoreInitialize(false, true);
-            TriggerInitialize(false,true,0,0.0,TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,0);
+            Write(NewportScpi.TriggerExternalDisable);
+            Write("*RST\r");
+            Thread.Sleep(1000);
+           // DatastoreInitialize(false, true);
+            DatastoreInitialize(true,
+                new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,true, CaptureMode.DC_CONTINUOUS, 1, 0));
+            //TriggerInitialize(false,true,0,0.0,TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,0);
+            TriggerInitialize(false,new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,true,CaptureMode.DC_CONTINUOUS,1,0));
         }
 
-        public string DatastoreInitialize(bool enable, bool ringBuffer, PowermeterMode mode= PowermeterMode.DcContinuous, uint datastoreSize=250000, uint datastoreInterval = 1)
+		[Obsolete("Use NewportMeasurmentSettings",true)]
+        public string DatastoreInitialize(bool enable, bool ringBuffer, CaptureMode mode= CaptureMode.DC_CONTINUOUS, uint datastoreSize=DATASTORE_SIZE_MAX, uint datastoreInterval = 1)
         {
             var result = Write(NewportScpi.DataStoreDisable);
             if(string.IsNullOrEmpty(result))    result = Write(NewportScpi.DataStoreBuffer(ringBuffer));
@@ -636,7 +678,39 @@ namespace Newport.Usb
             if(string.IsNullOrEmpty(result) && enable) result = Write(NewportScpi.DataStoreEnable);
             return result;
         }
+		
+        public string DatastoreInitialize(bool enable, NewportMeasurementSettings settings)
+        {
+            var result = Write(NewportScpi.DataStoreDisable);
+            Flush();
+            if (string.IsNullOrEmpty(result)) result = Write(NewportScpi.DataStoreBuffer(settings.Ringbuffer));
+            if (string.IsNullOrEmpty(result)) result = Write(NewportScpi.DataStoreClear);
+            if (string.IsNullOrEmpty(result)) result = Write(NewportScpi.DataStoreInterval(settings.DatastoreInterval));
+            if (string.IsNullOrEmpty(result)) result = Write(NewportScpi.DataStoreSize(DATASTORE_SIZE_MAX));
+            if (string.IsNullOrEmpty(result)) result = Write(NewportScpi.Mode(settings.Mode));
+            if (string.IsNullOrEmpty(result) && enable) result = Write(NewportScpi.DataStoreEnable);
+            return result;
+        }
+		
+		
+        private void TriggerInitialize(bool enable, NewportMeasurementSettings settings)
+        {
+            Write(NewportScpi.TriggerExternalDisable);
+            Write(NewportScpi.TriggerHoldoff((uint)(settings.Holdoff * 1000.0)));
+            Write(NewportScpi.TriggerEdge(settings.RisingEdge));
+            //Write(settings.StartEvent == TriggerStartEvent.ExternalTrigger
+            //    ? NewportScpi.TriggerExternalEnable(settings.Channel)
+            //    : NewportScpi.TriggerExternalDisable);
 
+            Write(NewportScpi.TriggerStartEvent(settings.StartEvent));
+            Write(NewportScpi.TriggerStopEvent(settings.StopEvent));
+            Write(NewportScpi.TriggerTimeMs((uint)(settings.DurationSeconds * 1000.0)));
+
+            Write(NewportScpi.TriggerStateArm);
+            if (enable && settings.StartEvent == TriggerStartEvent.ExternalTrigger) Write(NewportScpi.TriggerExternalEnable(settings.Channel));
+        }
+
+		[Obsolete("Use NewportMeasurmentSettings",true)]
         private void TriggerInitialize(bool enable, bool risingEdge,
                                 uint channel = 0,
                                 double duration = 5.0,
@@ -644,15 +718,15 @@ namespace Newport.Usb
                                 TriggerStopEvent stopEvent = TriggerStopEvent.StopAfterTime,
                                 uint holdoffMs = 0)
         {
-            Write(NewportScpi.TriggerDisable);
+            Write(NewportScpi.TriggerExternalDisable);
             Write(NewportScpi.TriggerHoldoff(holdoffMs));
             Write(NewportScpi.TriggerEdge(risingEdge));
             Write(NewportScpi.TriggerStartEvent(startEvent));
             Write(NewportScpi.TriggerStopEvent(stopEvent));
-            Write(NewportScpi.TriggerTime((uint)(duration * 1000)));
+            Write(NewportScpi.TriggerTimeMs((uint)(duration * 1000)));
 
             Write(NewportScpi.TriggerStateArm);
-            if (enable) Write(NewportScpi.TriggerEnable(channel));
+            if (enable) Write(NewportScpi.TriggerExternalEnable(channel));
         }
     }
 }

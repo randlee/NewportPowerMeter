@@ -37,7 +37,10 @@ namespace DataStoreSample
             this.txtTime = new System.Windows.Forms.TextBox();
             this.buttonContinuous = new System.Windows.Forms.Button();
             this.buttonAbort = new System.Windows.Forms.Button();
-            this.buttonTriggered = new System.Windows.Forms.Button();
+            this.buttonTriggeredSoftkey = new System.Windows.Forms.Button();
+            this.buttonTriggerTtl = new System.Windows.Forms.Button();
+            this.buttonTriggerCommand = new System.Windows.Forms.Button();
+            this.buttonSendScpiTrigger = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // lblSampleSize
@@ -115,7 +118,7 @@ namespace DataStoreSample
             // 
             // buttonContinuous
             // 
-            this.buttonContinuous.Location = new System.Drawing.Point(867, 29);
+            this.buttonContinuous.Location = new System.Drawing.Point(867, 23);
             this.buttonContinuous.Margin = new System.Windows.Forms.Padding(6);
             this.buttonContinuous.Name = "buttonContinuous";
             this.buttonContinuous.Size = new System.Drawing.Size(150, 44);
@@ -127,7 +130,7 @@ namespace DataStoreSample
             // buttonAbort
             // 
             this.buttonAbort.Enabled = false;
-            this.buttonAbort.Location = new System.Drawing.Point(867, 177);
+            this.buttonAbort.Location = new System.Drawing.Point(867, 441);
             this.buttonAbort.Margin = new System.Windows.Forms.Padding(6);
             this.buttonAbort.Name = "buttonAbort";
             this.buttonAbort.Size = new System.Drawing.Size(150, 44);
@@ -136,23 +139,60 @@ namespace DataStoreSample
             this.buttonAbort.UseVisualStyleBackColor = true;
             this.buttonAbort.Click += new System.EventHandler(this.buttonAbort_Click);
             // 
-            // buttonTriggered
+            // buttonTriggeredSoftkey
             // 
-            this.buttonTriggered.Location = new System.Drawing.Point(867, 103);
-            this.buttonTriggered.Margin = new System.Windows.Forms.Padding(6);
-            this.buttonTriggered.Name = "buttonTriggered";
-            this.buttonTriggered.Size = new System.Drawing.Size(150, 44);
-            this.buttonTriggered.TabIndex = 19;
-            this.buttonTriggered.Text = "Triggered";
-            this.buttonTriggered.UseVisualStyleBackColor = true;
-            this.buttonTriggered.Click += new System.EventHandler(this.buttonTriggered_Click);
+            this.buttonTriggeredSoftkey.Location = new System.Drawing.Point(867, 85);
+            this.buttonTriggeredSoftkey.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonTriggeredSoftkey.Name = "buttonTriggeredSoftkey";
+            this.buttonTriggeredSoftkey.Size = new System.Drawing.Size(150, 71);
+            this.buttonTriggeredSoftkey.TabIndex = 19;
+            this.buttonTriggeredSoftkey.Text = "Softkey Trigger";
+            this.buttonTriggeredSoftkey.UseVisualStyleBackColor = true;
+            this.buttonTriggeredSoftkey.Click += new System.EventHandler(this.buttonTriggeredSoftkey_Click);
+            // 
+            // buttonTriggerTtl
+            // 
+            this.buttonTriggerTtl.Location = new System.Drawing.Point(867, 174);
+            this.buttonTriggerTtl.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonTriggerTtl.Name = "buttonTriggerTtl";
+            this.buttonTriggerTtl.Size = new System.Drawing.Size(150, 71);
+            this.buttonTriggerTtl.TabIndex = 20;
+            this.buttonTriggerTtl.Text = "TTL Trigger";
+            this.buttonTriggerTtl.UseVisualStyleBackColor = true;
+            this.buttonTriggerTtl.Click += new System.EventHandler(this.buttonTriggerTtl_Click);
+            // 
+            // buttonTriggerCommand
+            // 
+            this.buttonTriggerCommand.Location = new System.Drawing.Point(867, 263);
+            this.buttonTriggerCommand.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonTriggerCommand.Name = "buttonTriggerCommand";
+            this.buttonTriggerCommand.Size = new System.Drawing.Size(150, 71);
+            this.buttonTriggerCommand.TabIndex = 21;
+            this.buttonTriggerCommand.Text = "SCPI Trigger";
+            this.buttonTriggerCommand.UseVisualStyleBackColor = true;
+            this.buttonTriggerCommand.Click += new System.EventHandler(this.buttonTriggerCommand_Click);
+            // 
+            // buttonSendScpiTrigger
+            // 
+            this.buttonSendScpiTrigger.Enabled = false;
+            this.buttonSendScpiTrigger.Location = new System.Drawing.Point(867, 352);
+            this.buttonSendScpiTrigger.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonSendScpiTrigger.Name = "buttonSendScpiTrigger";
+            this.buttonSendScpiTrigger.Size = new System.Drawing.Size(150, 71);
+            this.buttonSendScpiTrigger.TabIndex = 22;
+            this.buttonSendScpiTrigger.Text = "Send Scpi Trigger";
+            this.buttonSendScpiTrigger.UseVisualStyleBackColor = true;
+            this.buttonSendScpiTrigger.Click += new System.EventHandler(this.buttonSendScpiTrigger_Click);
             // 
             // DataStoreForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1061, 496);
-            this.Controls.Add(this.buttonTriggered);
+            this.Controls.Add(this.buttonSendScpiTrigger);
+            this.Controls.Add(this.buttonTriggerCommand);
+            this.Controls.Add(this.buttonTriggerTtl);
+            this.Controls.Add(this.buttonTriggeredSoftkey);
             this.Controls.Add(this.buttonAbort);
             this.Controls.Add(this.buttonContinuous);
             this.Controls.Add(this.txtTime);
@@ -168,6 +208,7 @@ namespace DataStoreSample
             this.Name = "DataStoreForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Data Store Sample Application";
+            this.Load += new System.EventHandler(this.DataStoreForm_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -184,7 +225,10 @@ namespace DataStoreSample
         private System.Windows.Forms.TextBox txtTime;
         private System.Windows.Forms.Button buttonContinuous;
         private System.Windows.Forms.Button buttonAbort;
-        private System.Windows.Forms.Button buttonTriggered;
+        private System.Windows.Forms.Button buttonTriggeredSoftkey;
+        private System.Windows.Forms.Button buttonTriggerTtl;
+        private System.Windows.Forms.Button buttonTriggerCommand;
+        private System.Windows.Forms.Button buttonSendScpiTrigger;
     }
 }
 
