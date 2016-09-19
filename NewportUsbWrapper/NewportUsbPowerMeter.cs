@@ -563,6 +563,7 @@ namespace Newport.Usb
             Measuring = true;
             uint startIndex=1;
 
+            Write(NewportScpi.DataStoreEnable);
             WaitForTrigger(Math.Min(_samples + 1000, _samples));
             while (Measuring)
             {
@@ -640,9 +641,9 @@ namespace Newport.Usb
         {
             Flush();
   //          DatastoreInitialize(true, true, CaptureMode.DC_CONTINUOUS);
-            DatastoreInitialize(false,new NewportMeasurementSettings(channel, startEvent, stopEvent, risingEdge, CaptureMode.DC_CONTINUOUS, 1,holdoffSeconds));
+            DatastoreInitialize(false,new NewportMeasurementSettings(channel, startEvent, stopEvent, risingEdge, CaptureMode.DC_CONTINUOUS,durationSeconds, 1,holdoffSeconds));
    //         TriggerInitialize(true, risingEdge,0, durationSeconds, startEvent, stopEvent, holdoffSeconds);
-            TriggerInitialize(true,new NewportMeasurementSettings(channel,startEvent,stopEvent,true,CaptureMode.DC_CONTINUOUS,durationSeconds,holdoffSeconds));
+            TriggerInitialize(true,new NewportMeasurementSettings(channel,startEvent,stopEvent,true,CaptureMode.DC_CONTINUOUS,durationSeconds,1,holdoffSeconds));
             _samples = (uint)(durationSeconds*10000.0);
             ThreadPool.QueueUserWorkItem(RunTriggeredMeasurementTask, null);
         }
@@ -660,7 +661,7 @@ namespace Newport.Usb
             Write("*RST\r");
             Thread.Sleep(1000);
            // DatastoreInitialize(false, true);
-            DatastoreInitialize(true,
+            DatastoreInitialize(false,
                 new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,true, CaptureMode.DC_CONTINUOUS, 1, 0));
             //TriggerInitialize(false,true,0,0.0,TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,0);
             TriggerInitialize(false,new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,true,CaptureMode.DC_CONTINUOUS,1,0));

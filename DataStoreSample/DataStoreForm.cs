@@ -95,7 +95,7 @@ namespace DataStoreSample
 
                 //             var status = _newport.DatastoreInitialize(true, false, CaptureMode.DC_CONTINUOUS, nSampleSize, 1);
                 var status = _newport.DatastoreInitialize(true,
-                    new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop, true, CaptureMode.DC_CONTINUOUS, 1, 0));
+                    new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop, true, CaptureMode.DC_CONTINUOUS,nSampleSize/10000.0, 1, 0));
 
                 uint nSamples = 0;
                 if (string.IsNullOrEmpty(status))
@@ -116,13 +116,15 @@ namespace DataStoreSample
                     }
                     else
                     {
-                        rtbResponse.Text += $"\rStatus = {ioStatus}";
+                        status = $"\rStatus = {ioStatus}";
+                        //rtbResponse.Text += status;
                     }
                 }
 
                 if (!string.IsNullOrEmpty(status))
                 {
                     rtbResponse.Text += $"\rStatus = {status}";
+                    _newport.ResetMeasurement();
                 }
             }
             catch (Exception ex)
@@ -231,7 +233,7 @@ namespace DataStoreSample
                 var nSampleSize = GetSampleSize();
                 _newport.ResetMeasurement();
                 _newport.TriggeredMeasurement(true, 0, nSampleSize/10000.0, TriggerStartEvent.TriggerStateCommand);
-                _newport.Write(NewportScpi.DataStoreEnable);
+
                 updateButtonState(true);
             }
             catch (Exception ex)
@@ -306,7 +308,7 @@ namespace DataStoreSample
             int count = _newport.ReadDataStoreValues(sampleCount, out data);
             StreamWriter writer = null;
 
-            var status = -1;
+            var status = -0;
             try
             {
                 var sbWriteBuf = new StringBuilder(5120);
