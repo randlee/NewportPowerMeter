@@ -197,7 +197,7 @@ namespace DataStoreSample
             }
         }
 
-        private void buttonTriggerTtl_Click(object sender, EventArgs e)
+        private void buttonTriggerTtlDuration_Click(object sender, EventArgs e)
         {
             if (!ConnectDevices())
             {
@@ -210,6 +210,29 @@ namespace DataStoreSample
                 var nSampleSize = GetSampleSize();
                 _newport.ResetMeasurement();
                 _newport.TriggeredMeasurement(true, 0, nSampleSize/10000.0, TriggerStartEvent.ExternalTrigger);
+                updateButtonState(true);
+            }
+            catch (Exception ex)
+            {
+                // Display the exception message
+                MessageBox.Show($"Could not complete the DS:GET? query.\n{ex.Message}", "DS:GET?", MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private void buttonTtlTriggerEdge2Edge_Click(object sender, EventArgs e)
+        {
+            if (!ConnectDevices())
+            {
+                return;
+            } // device not connected...
+            try
+            {
+                rtbResponse.Text = "";
+                // Get the sample size from the edit box on the form
+                var nSampleSize = GetSampleSize();
+                _newport.ResetMeasurement();
+                _newport.TriggeredMeasurement(true, 0, NewportUsbPowerMeter.DATASTORE_SIZE_MAX / 10000.0, TriggerStartEvent.ExternalTrigger,TriggerStopEvent.StopOnExternalTrigger,0);
                 updateButtonState(true);
             }
             catch (Exception ex)
@@ -368,7 +391,7 @@ namespace DataStoreSample
             buttonContinuous.Enabled = !measuring;
             buttonTriggeredSoftkey.Enabled = !measuring;
             buttonTriggerCommand.Enabled = !measuring;
-            buttonTriggerTtl.Enabled = !measuring;
+            buttonTriggerTtlDuration.Enabled = !measuring;
             buttonSendScpiTrigger.Enabled = measuring;
         }
 
@@ -388,5 +411,7 @@ namespace DataStoreSample
             }
             updateButtonState(measuring);
         }
+
+
     }
 }

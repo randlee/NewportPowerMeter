@@ -38,9 +38,10 @@ namespace DataStoreSample
             this.buttonContinuous = new System.Windows.Forms.Button();
             this.buttonAbort = new System.Windows.Forms.Button();
             this.buttonTriggeredSoftkey = new System.Windows.Forms.Button();
-            this.buttonTriggerTtl = new System.Windows.Forms.Button();
+            this.buttonTriggerTtlDuration = new System.Windows.Forms.Button();
             this.buttonTriggerCommand = new System.Windows.Forms.Button();
             this.buttonSendScpiTrigger = new System.Windows.Forms.Button();
+            this.buttonTtlTriggerEdge2Edge = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // lblSampleSize
@@ -90,7 +91,7 @@ namespace DataStoreSample
             this.rtbResponse.Margin = new System.Windows.Forms.Padding(6);
             this.rtbResponse.Name = "rtbResponse";
             this.rtbResponse.ReadOnly = true;
-            this.rtbResponse.Size = new System.Drawing.Size(664, 355);
+            this.rtbResponse.Size = new System.Drawing.Size(664, 422);
             this.rtbResponse.TabIndex = 8;
             this.rtbResponse.TabStop = false;
             this.rtbResponse.Text = "";
@@ -98,7 +99,7 @@ namespace DataStoreSample
             // lblTime
             // 
             this.lblTime.AutoSize = true;
-            this.lblTime.Location = new System.Drawing.Point(24, 452);
+            this.lblTime.Location = new System.Drawing.Point(24, 530);
             this.lblTime.Margin = new System.Windows.Forms.Padding(6, 0, 6, 0);
             this.lblTime.Name = "lblTime";
             this.lblTime.Size = new System.Drawing.Size(65, 25);
@@ -108,7 +109,7 @@ namespace DataStoreSample
             // txtTime
             // 
             this.txtTime.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.txtTime.Location = new System.Drawing.Point(172, 450);
+            this.txtTime.Location = new System.Drawing.Point(172, 528);
             this.txtTime.Margin = new System.Windows.Forms.Padding(6);
             this.txtTime.Name = "txtTime";
             this.txtTime.ReadOnly = true;
@@ -130,7 +131,7 @@ namespace DataStoreSample
             // buttonAbort
             // 
             this.buttonAbort.Enabled = false;
-            this.buttonAbort.Location = new System.Drawing.Point(867, 441);
+            this.buttonAbort.Location = new System.Drawing.Point(867, 515);
             this.buttonAbort.Margin = new System.Windows.Forms.Padding(6);
             this.buttonAbort.Name = "buttonAbort";
             this.buttonAbort.Size = new System.Drawing.Size(150, 44);
@@ -150,20 +151,20 @@ namespace DataStoreSample
             this.buttonTriggeredSoftkey.UseVisualStyleBackColor = true;
             this.buttonTriggeredSoftkey.Click += new System.EventHandler(this.buttonTriggeredSoftkey_Click);
             // 
-            // buttonTriggerTtl
+            // buttonTriggerTtlDuration
             // 
-            this.buttonTriggerTtl.Location = new System.Drawing.Point(867, 174);
-            this.buttonTriggerTtl.Margin = new System.Windows.Forms.Padding(6);
-            this.buttonTriggerTtl.Name = "buttonTriggerTtl";
-            this.buttonTriggerTtl.Size = new System.Drawing.Size(150, 71);
-            this.buttonTriggerTtl.TabIndex = 20;
-            this.buttonTriggerTtl.Text = "TTL Trigger";
-            this.buttonTriggerTtl.UseVisualStyleBackColor = true;
-            this.buttonTriggerTtl.Click += new System.EventHandler(this.buttonTriggerTtl_Click);
+            this.buttonTriggerTtlDuration.Location = new System.Drawing.Point(867, 251);
+            this.buttonTriggerTtlDuration.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonTriggerTtlDuration.Name = "buttonTriggerTtlDuration";
+            this.buttonTriggerTtlDuration.Size = new System.Drawing.Size(150, 71);
+            this.buttonTriggerTtlDuration.TabIndex = 20;
+            this.buttonTriggerTtlDuration.Text = "TTL Trigger (duration)";
+            this.buttonTriggerTtlDuration.UseVisualStyleBackColor = true;
+            this.buttonTriggerTtlDuration.Click += new System.EventHandler(this.buttonTriggerTtlDuration_Click);
             // 
             // buttonTriggerCommand
             // 
-            this.buttonTriggerCommand.Location = new System.Drawing.Point(867, 263);
+            this.buttonTriggerCommand.Location = new System.Drawing.Point(867, 168);
             this.buttonTriggerCommand.Margin = new System.Windows.Forms.Padding(6);
             this.buttonTriggerCommand.Name = "buttonTriggerCommand";
             this.buttonTriggerCommand.Size = new System.Drawing.Size(150, 71);
@@ -175,7 +176,7 @@ namespace DataStoreSample
             // buttonSendScpiTrigger
             // 
             this.buttonSendScpiTrigger.Enabled = false;
-            this.buttonSendScpiTrigger.Location = new System.Drawing.Point(867, 352);
+            this.buttonSendScpiTrigger.Location = new System.Drawing.Point(867, 423);
             this.buttonSendScpiTrigger.Margin = new System.Windows.Forms.Padding(6);
             this.buttonSendScpiTrigger.Name = "buttonSendScpiTrigger";
             this.buttonSendScpiTrigger.Size = new System.Drawing.Size(150, 71);
@@ -184,14 +185,26 @@ namespace DataStoreSample
             this.buttonSendScpiTrigger.UseVisualStyleBackColor = true;
             this.buttonSendScpiTrigger.Click += new System.EventHandler(this.buttonSendScpiTrigger_Click);
             // 
+            // buttonTtlTriggerEdge2Edge
+            // 
+            this.buttonTtlTriggerEdge2Edge.Location = new System.Drawing.Point(867, 334);
+            this.buttonTtlTriggerEdge2Edge.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonTtlTriggerEdge2Edge.Name = "buttonTtlTriggerEdge2Edge";
+            this.buttonTtlTriggerEdge2Edge.Size = new System.Drawing.Size(150, 71);
+            this.buttonTtlTriggerEdge2Edge.TabIndex = 23;
+            this.buttonTtlTriggerEdge2Edge.Text = "TTL Trigger (edge-edge)";
+            this.buttonTtlTriggerEdge2Edge.UseVisualStyleBackColor = true;
+            this.buttonTtlTriggerEdge2Edge.Click += new System.EventHandler(this.buttonTtlTriggerEdge2Edge_Click);
+            // 
             // DataStoreForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1061, 496);
+            this.ClientSize = new System.Drawing.Size(1061, 574);
+            this.Controls.Add(this.buttonTtlTriggerEdge2Edge);
             this.Controls.Add(this.buttonSendScpiTrigger);
             this.Controls.Add(this.buttonTriggerCommand);
-            this.Controls.Add(this.buttonTriggerTtl);
+            this.Controls.Add(this.buttonTriggerTtlDuration);
             this.Controls.Add(this.buttonTriggeredSoftkey);
             this.Controls.Add(this.buttonAbort);
             this.Controls.Add(this.buttonContinuous);
@@ -226,9 +239,10 @@ namespace DataStoreSample
         private System.Windows.Forms.Button buttonContinuous;
         private System.Windows.Forms.Button buttonAbort;
         private System.Windows.Forms.Button buttonTriggeredSoftkey;
-        private System.Windows.Forms.Button buttonTriggerTtl;
+        private System.Windows.Forms.Button buttonTriggerTtlDuration;
         private System.Windows.Forms.Button buttonTriggerCommand;
         private System.Windows.Forms.Button buttonSendScpiTrigger;
+        private System.Windows.Forms.Button buttonTtlTriggerEdge2Edge;
     }
 }
 
