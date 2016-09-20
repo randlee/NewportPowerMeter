@@ -92,8 +92,6 @@ namespace DataStoreSample
                 }
 
                 rtbResponse.Text = string.Empty;
-
-                //             var status = _newport.DatastoreInitialize(true, false, CaptureMode.DC_CONTINUOUS, nSampleSize, 1);
                 var status = _newport.DatastoreInitialize(true,
                     new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop, true, CaptureMode.DC_CONTINUOUS,nSampleSize/10000.0, 1, 0));
 
@@ -106,19 +104,26 @@ namespace DataStoreSample
                     rtbResponse.Update();
                 }
 
-                if (string.IsNullOrEmpty(status))
+                if (nSamples > 0)
                 {
-                    List<double> data;
-                    var ioStatus = GetDataStoreValues(nSamples, out data);
-                    if (ioStatus == 0)
+                    if (string.IsNullOrEmpty(status))
                     {
-                        rtbResponse.Text = $"Count={data.Count} Min={data.Min()} Max={data.Max()}";
+                        List<double> data;
+                        var ioStatus = GetDataStoreValues(nSamples, out data);
+                        if (ioStatus == 0)
+                        {
+                            rtbResponse.Text = $"Count={data.Count} Min={data.Min()} Max={data.Max()}";
+                        }
+                        else
+                        {
+                            status = $"\rStatus = {ioStatus}";
+                            //rtbResponse.Text += status;
+                        }
                     }
-                    else
-                    {
-                        status = $"\rStatus = {ioStatus}";
-                        //rtbResponse.Text += status;
-                    }
+                }
+                else
+                {
+                    status = "Nothing to read!";
                 }
 
                 if (!string.IsNullOrEmpty(status))
@@ -158,7 +163,6 @@ namespace DataStoreSample
                 if (string.IsNullOrEmpty(status))
                 {
                     _newport.ContinuousReading(nSampleSize);
-                    updateButtonState(true);
                 }
 
                 if (!string.IsNullOrEmpty(status))
@@ -182,12 +186,9 @@ namespace DataStoreSample
             } // device not connected...
             try
             {
-                rtbResponse.Text = "";
-                // Get the sample size from the edit box on the form
-                var nSampleSize = GetSampleSize();
-                _newport.ResetMeasurement();
-                _newport.TriggeredMeasurement(true, 0, nSampleSize/10000.0, TriggerStartEvent.SoftKey);
-                updateButtonState(true);
+                var settings = NewportMeasurementSettings.SoftkeyTriggered(0, 1, GetSampleSize(),true);
+                rtbResponse.Text = $"Initializing softkey trigger {settings.Samples} samples, {settings.DurationSeconds} sec ";
+                _newport.TriggeredMeasurement(settings);
             }
             catch (Exception ex)
             {
@@ -205,12 +206,17 @@ namespace DataStoreSample
             } // device not connected...
             try
             {
+#if false
                 rtbResponse.Text = "";
                 // Get the sample size from the edit box on the form
                 var nSampleSize = GetSampleSize();
                 _newport.ResetMeasurement();
                 _newport.TriggeredMeasurement(true, 0, nSampleSize/10000.0, TriggerStartEvent.ExternalTrigger);
                 updateButtonState(true);
+#endif
+                var settings = NewportMeasurementSettings.TtlTriggered(0,1,GetSampleSize(), true,true);
+                rtbResponse.Text = $"Initializing ttl-ttl trigger {settings.Samples} samples, {settings.DurationSeconds} sec ";
+                _newport.TriggeredMeasurement(settings);
             }
             catch (Exception ex)
             {
@@ -228,12 +234,17 @@ namespace DataStoreSample
             } // device not connected...
             try
             {
+#if false
                 rtbResponse.Text = "";
                 // Get the sample size from the edit box on the form
                 var nSampleSize = GetSampleSize();
                 _newport.ResetMeasurement();
                 _newport.TriggeredMeasurement(true, 0, NewportUsbPowerMeter.DATASTORE_SIZE_MAX / 10000.0, TriggerStartEvent.ExternalTrigger,TriggerStopEvent.StopOnExternalTrigger,0);
                 updateButtonState(true);
+#endif
+                var settings = NewportMeasurementSettings.TtlTriggerToTrigger(0, 1, true,true);
+                rtbResponse.Text = $"Initializing ttl-ttl trigger max samples: {settings.Samples} samples, max duration: {settings.DurationSeconds} sec ";
+                _newport.TriggeredMeasurement(settings);
             }
             catch (Exception ex)
             {
@@ -251,13 +262,9 @@ namespace DataStoreSample
             } // device not connected...
             try
             {
-                rtbResponse.Text = "";
-                // Get the sample size from the edit box on the form
-                var nSampleSize = GetSampleSize();
-                _newport.ResetMeasurement();
-                _newport.TriggeredMeasurement(true, 0, nSampleSize/10000.0, TriggerStartEvent.TriggerStateCommand);
-
-                updateButtonState(true);
+                var settings = NewportMeasurementSettings.CommandTriggered(0, 1, GetSampleSize(),true);
+                rtbResponse.Text = $"Initializing SCPI trigger {settings.Samples} samples, {settings.DurationSeconds} sec ";
+                _newport.TriggeredMeasurement(settings);
             }
             catch (Exception ex)
             {
@@ -273,17 +280,17 @@ namespace DataStoreSample
         }
 
 
-        private void _newport_ContinuousData(List<double> obj)
+        private void _newport_ContinuousData(List<double> data)
         {
             if (rtbResponse.InvokeRequired)
             {
-                BeginInvoke(new Action(() => _newport_ContinuousData(obj)), null);
+                BeginInvoke(new Action(() => _newport_ContinuousData(data)), null);
                 return;
             }
             var displayText = rtbResponse.Text;
             if (!string.IsNullOrEmpty(displayText))
-                displayText += $"\r\n{DateTime.Now} Rx {obj.Count}/{_newport.SamplesRead}";
-            else displayText = $"{DateTime.Now} Rx {obj.Count}/{_newport.SamplesRead}";
+                displayText += $"\r\n{DateTime.Now} Rx {data.Count}/{_newport.SamplesRead}";
+            else displayText = $"{DateTime.Now} Rx {data.Count}/{_newport.SamplesRead}";
             rtbResponse.Text = displayText;
         }
 
@@ -316,7 +323,7 @@ namespace DataStoreSample
             }
             txtSampleSize.SelectAll();
             txtSampleSize.Focus();
-            return 0;
+            return 1;
         }
 
 
@@ -373,7 +380,6 @@ namespace DataStoreSample
         /// <summary>
         /// This method gets the time data and formats it according to the specified format.
         /// </summary>
-        /// <param name="format">The format string for the time data.</param>
         /// <param name="time">The number of microseconds.</param>
         /// <returns>The formatted string.</returns>
         private string FormatTimeData(TimeSpan time)
@@ -385,31 +391,39 @@ namespace DataStoreSample
 
 
 
-        private void updateButtonState(bool measuring)
+        private void updateButtonState(NewportState measuring)
         {
-            buttonAbort.Enabled = measuring;
-            buttonContinuous.Enabled = !measuring;
-            buttonTriggeredSoftkey.Enabled = !measuring;
-            buttonTriggerCommand.Enabled = !measuring;
-            buttonTriggerTtlDuration.Enabled = !measuring;
-            buttonSendScpiTrigger.Enabled = measuring;
+            buttonAbort.Enabled = measuring.Measuring;
+            buttonContinuous.Enabled = !measuring.Measuring;
+            buttonTriggeredSoftkey.Enabled = !measuring.Measuring;
+            buttonTriggerCommand.Enabled = !measuring.Measuring;
+            buttonTriggerTtlDuration.Enabled = !measuring.Measuring;
+            buttonTtlTriggerEdge2Edge.Enabled = !measuring.Measuring;
+
+            buttonSendScpiTrigger.Enabled = measuring.Armed;
         }
 
         private void buttonAbort_Click(object sender, EventArgs e)
         {
             _newport.ResetMeasurement();
-            updateButtonState(false);
+           // updateButtonState(false);
         }
 
-
-        private void _newport_MeasuringChanged(bool measuring)
+        private NewportState _previousState = new NewportState();
+        private void _newport_MeasuringChanged(NewportState state)
         {
             if (rtbResponse.InvokeRequired)
             {
-                BeginInvoke(new Action(() => _newport_MeasuringChanged(measuring)), null);
+                BeginInvoke(new Action(() => _newport_MeasuringChanged(state)), null);
                 return;
             }
-            updateButtonState(measuring);
+            updateButtonState(state);
+            if(state.Measuring)
+            {
+                if (state.Armed && !_previousState.Armed) rtbResponse.Text += "\r\nTrigger armed";
+                if (state.Triggered && !_previousState.Triggered) rtbResponse.Text += "\r\nTriggerd";
+            }
+            else if (_previousState.Measuring) rtbResponse.Text += "\r\nMeasurement Complete";
         }
 
 

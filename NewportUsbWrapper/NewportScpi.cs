@@ -157,10 +157,15 @@ namespace Newport.Usb
         public static string TriggerStateQuery => "PM:TRIG:STATE?";
 
         /// <summary>
+        /// PM:TRIG:STATE 0
         /// This command sets the trigger state to 'armed'
         /// </summary>
         public static string TriggerStateArm => "PM:TRIG:STATE 0";
 
+        /// <summary>
+        /// PM:TRIG:STATE 1
+        /// This command sets the trigger state to 'triggered'
+        /// </summary>
         public static string TriggerStateTriggered => "PM:TRIG:STATE 1";
         /// <summary>
         /// This command returns the measurement level that indicates a trigger stop condition.

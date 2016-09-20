@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -30,14 +31,14 @@ namespace Newport.Usb
         public const string END_OF_HEADER = "End of Header\r\n";
         public const string END_OF_DATA = "End of Data";
 
-        private bool _measuring;
+        private NewportState _measuring = new NewportState(false,false,false);
 
-        public bool Measuring
+        public NewportState Measuring
         {
             get { return _measuring; }
             protected set
             {
-                if (_measuring == value) return;
+                if (_measuring.Equals(value)) return;
                 _measuring = value;
                 MeasuringChanged?.Invoke(_measuring);
             }
@@ -94,7 +95,7 @@ namespace Newport.Usb
                     if (!string.IsNullOrEmpty(_deviceKey)) break;
                 }
                 Flush();
-                ResetMeasurement();
+                resetMeasurement();
             }
 #endif
             return open;
@@ -531,73 +532,92 @@ namespace Newport.Usb
 
 
         public virtual event Action<List<double>> ContinuousData;
-        public virtual event Action<bool> MeasuringChanged;
+        public virtual event Action<NewportState> MeasuringChanged;
         public int SamplesRead { get; private set; }
 
         protected virtual void RunContinuousTask(object unused)
         {
-            SamplesRead = 0;
-            Measuring = true;
-            while (Measuring)
+            try
             {
-                var samples = _samples;
-                if (samples <= 0) break;
- //               Flush();
+                SamplesRead = 0;
+                Measuring = new NewportState(true);
+                while (Measuring.Measuring)
+                {
+                    var samples = _samples;
+                    if (samples <= 0) break;
+                    //               Flush();
 //                WaitForDataStore(samples);
 
-                var samplesReady = WaitForDataStore(samples);
-                if (samplesReady >= samples)
-                {
-                    List<double> result;
-                    ReadDataStoreValues(samples, out result);
-                    SamplesRead += result.Count;
-                    ContinuousData?.Invoke(result);
-                }
-            }
-            Measuring = false;
-        }
-
-        protected virtual void RunTriggeredMeasurementTask(object unused)
-        {
-            SamplesRead = 0;
-            Measuring = true;
-            uint startIndex=1;
-
-            Write(NewportScpi.DataStoreEnable);
-            WaitForTrigger(Math.Min(_samples + 1000, _samples));
-            while (Measuring)
-            {
-                var samples = _samples;
-                if (samples <= 0) break;
-                var samplesRequested = Math.Min(startIndex+1000, _samples);
-                var endIndex = WaitForDataStore(samplesRequested);
-                if (true)   //samplesReady >= samples)
-                {
-                    List<double> result;
-                    var numberRead = ReadDataStoreValues(startIndex,endIndex, out result);
-                    if(numberRead < 0)
+                    var samplesReady = WaitForDataStore(samples);
+                    if (samplesReady >= samples)
                     {
-                        Debug.WriteLine($"Error reading triggered measurement [{startIndex},{endIndex}]");
-                        Debug.WriteLine(ErrorString(numberRead));
-                        break;
+                        List<double> result;
+                        ReadDataStoreValues(samples, out result);
+                        SamplesRead += result.Count;
+                        ContinuousData?.Invoke(result);
                     }
-                    SamplesRead += result.Count;
-                    ContinuousData?.Invoke(result);
-
-                    if (endIndex >= _samples) break;
-                    startIndex += (uint)result.Count;
                 }
             }
-            Measuring = false;
+            finally
+            {
+                Measuring = new NewportState(false);
+            }
         }
 
-        private void WaitForTrigger(uint minSamples)
+        protected virtual void RunTriggeredMeasurementTask(object settings)
+        {
+            try
+            {
+                SamplesRead = 0;
+                Measuring = new NewportState(true);
+                uint startIndex = 1;
+                var newportSettings = (NewportMeasurementSettings) settings;
+                if (newportSettings.ResetInstrument) resetMeasurement();
+                Flush();
+                TriggerInitialize(true, newportSettings);
+                Write(NewportScpi.DataStoreEnable);
+                Measuring = new NewportState(true, true);
+                if (WaitForTrigger(Math.Min(_samples + 1000, _samples)))
+                {
+                    Measuring = new NewportState(true, false, true);
+                    while (Measuring.Measuring)
+                    {
+                        var samples = _samples;
+                        if (samples <= 0) break;
+                        var samplesRequested = Math.Min(startIndex + 1000, _samples);
+                        var endIndex = WaitForDataStore(samplesRequested);
+                        if (true) //samplesReady >= samples)
+                        {
+                            List<double> result;
+                            var numberRead = ReadDataStoreValues(startIndex, endIndex, out result);
+                            if (numberRead < 0)
+                            {
+                                Debug.WriteLine($"Error reading triggered measurement [{startIndex},{endIndex}]");
+                                Debug.WriteLine(ErrorString(numberRead));
+                                break;
+                            }
+                            SamplesRead += result.Count;
+                            ContinuousData?.Invoke(result);
+
+                            if (endIndex >= _samples) break;
+                            startIndex += (uint) result.Count;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                Measuring = new NewportState(false);
+            }
+        }
+
+        private bool WaitForTrigger(uint minSamples)
         {
             var start = DateTime.Now;
             var triggered = 0;
             Debug.WriteLine("Waiting for trigger...");
             // Repeat until an error occurs
-            while (triggered == 0 && Measuring)
+            while (triggered == 0 && Measuring.Measuring)
             {// Query the trigger state
                 var writeResponse = Write(NewportScpi.TriggerStateQuery);
 
@@ -610,7 +630,11 @@ namespace Newport.Usb
                     {
                         triggered = int.Parse(response);
                         Debug.WriteLine($"{triggered} - {(DateTime.Now - start).TotalSeconds}");
-                        if (triggered > 0) { return; }
+                        if (triggered > 0)
+                        {
+                            Debug.WriteLine($"Triggered {(DateTime.Now - start).TotalSeconds}");
+                            return true;
+                        }
                         Write(NewportScpi.DataStoreCountQuery);
                         if(TryRead(out response,out ioStatus))
                         {
@@ -618,7 +642,11 @@ namespace Newport.Usb
                             uint samplesReady;
                             if (uint.TryParse(response, out samplesReady))
                             {
-                                if (samplesReady >= minSamples)  return;
+                                if (samplesReady >= minSamples)
+                                {
+                                    Debug.WriteLine($"Triggered {(DateTime.Now - start).TotalSeconds}");
+                                    return true;
+                                }
                             }
                         }
                     }
@@ -627,11 +655,12 @@ namespace Newport.Usb
                 {
                     Debug.WriteLine($"WaitForTrigger Error response '{writeResponse}'");
                 }
-                Thread.Sleep(1000);
+                Thread.Sleep(250);
             }
-            Debug.WriteLine($"Triggered {(DateTime.Now - start).TotalSeconds}");
+            return false;
         }
 
+        [Obsolete("not used",true)]
         public void TriggeredMeasurement(bool risingEdge, 
                                             uint channel=0,
                                             double durationSeconds=5.0, 
@@ -639,35 +668,47 @@ namespace Newport.Usb
                                             TriggerStopEvent stopEvent=TriggerStopEvent.StopAfterTime, 
                                             uint holdoffSeconds=0)
         {
-            Flush();
+  //          Flush();
   //          DatastoreInitialize(true, true, CaptureMode.DC_CONTINUOUS);
-            DatastoreInitialize(false,new NewportMeasurementSettings(channel, startEvent, stopEvent, risingEdge, CaptureMode.DC_CONTINUOUS,durationSeconds, 1,holdoffSeconds));
-   //         TriggerInitialize(true, risingEdge,0, durationSeconds, startEvent, stopEvent, holdoffSeconds);
-            TriggerInitialize(true,new NewportMeasurementSettings(channel,startEvent,stopEvent,true,CaptureMode.DC_CONTINUOUS,durationSeconds,1,holdoffSeconds));
-            _samples = (uint)(durationSeconds*10000.0);
-            ThreadPool.QueueUserWorkItem(RunTriggeredMeasurementTask, null);
+            var settings = new NewportMeasurementSettings(channel, startEvent, stopEvent, risingEdge, CaptureMode.DC_CONTINUOUS, durationSeconds, 1, holdoffSeconds);
+   //         DatastoreInitialize(false,settings);
+   ////         TriggerInitialize(true, risingEdge,0, durationSeconds, startEvent, stopEvent, holdoffSeconds);
+   //         TriggerInitialize(true,settings);
+   //         _samples = (uint)(durationSeconds*10000.0);
+   //         ThreadPool.QueueUserWorkItem(RunTriggeredMeasurementTask, null);
+            TriggeredMeasurement(settings);
         }
 
-
+        public void TriggeredMeasurement(NewportMeasurementSettings settings)
+        {
+ //           TriggerInitialize(true, settings);
+            _samples = (uint)(settings.DurationSeconds * 10000.0);
+            ThreadPool.QueueUserWorkItem(RunTriggeredMeasurementTask, settings);
+        }
 
         public void ResetMeasurement()
         {
-            var measuring = Measuring;
-            Measuring = false;
+            var measuring = Measuring.Measuring;
+            Measuring = new NewportState(false);
             if (measuring) Thread.Sleep(50);
 
+            resetMeasurement();
+        }
+
+        private void resetMeasurement()
+        {
             Flush();
             Write(NewportScpi.TriggerExternalDisable);
             Write("*RST\r");
             Thread.Sleep(1000);
-           // DatastoreInitialize(false, true);
+            // DatastoreInitialize(false, true);
             DatastoreInitialize(false,
-                new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,true, CaptureMode.DC_CONTINUOUS, 1, 0));
+                new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop, true, CaptureMode.DC_CONTINUOUS, 1, 0));
             //TriggerInitialize(false,true,0,0.0,TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,0);
-            TriggerInitialize(false,new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,true,CaptureMode.DC_CONTINUOUS,1,0));
+            TriggerInitialize(false, new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop, true, CaptureMode.DC_CONTINUOUS, 1, 0));
         }
 
-		[Obsolete("Use NewportMeasurmentSettings",true)]
+        [Obsolete("Use NewportMeasurmentSettings",true)]
         public string DatastoreInitialize(bool enable, bool ringBuffer, CaptureMode mode= CaptureMode.DC_CONTINUOUS, uint datastoreSize=DATASTORE_SIZE_MAX, uint datastoreInterval = 1)
         {
             var result = Write(NewportScpi.DataStoreDisable);
