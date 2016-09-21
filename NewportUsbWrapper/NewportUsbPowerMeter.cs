@@ -577,7 +577,7 @@ namespace Newport.Usb
                 TriggerInitialize(true, newportSettings);
                 Write(NewportScpi.DataStoreEnable);
                 Measuring = new NewportState(true, true);
-                if (WaitForTrigger(Math.Min(_samples + 1000, _samples)))
+                if (WaitForTrigger(Math.Min(1000, _samples)))
                 {
                     Measuring = new NewportState(true, false, true);
                     while (Measuring.Measuring)
@@ -702,10 +702,10 @@ namespace Newport.Usb
             Write("*RST\r");
             Thread.Sleep(1000);
             // DatastoreInitialize(false, true);
-            DatastoreInitialize(false,
-                new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop, true, CaptureMode.DC_CONTINUOUS, 1, 0));
+		    var __continuousSettings = NewportMeasurementSettings.ContiuousMeasurement(0, 1);
+            DatastoreInitialize(false, __continuousSettings);
             //TriggerInitialize(false,true,0,0.0,TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop,0);
-            TriggerInitialize(false, new NewportMeasurementSettings(0, TriggerStartEvent.ContinuousMeasurement, TriggerStopEvent.NeverStop, true, CaptureMode.DC_CONTINUOUS, 1, 0));
+            TriggerInitialize(false, __continuousSettings);
         }
 
         [Obsolete("Use NewportMeasurmentSettings",true)]
