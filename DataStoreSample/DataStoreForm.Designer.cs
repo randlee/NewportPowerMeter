@@ -42,33 +42,38 @@ namespace DataStoreSample
             this.buttonTriggerCommand = new System.Windows.Forms.Button();
             this.buttonSendScpiTrigger = new System.Windows.Forms.Button();
             this.buttonTtlTriggerEdge2Edge = new System.Windows.Forms.Button();
+            this.textBoxInterval = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.buttonSaveLog = new System.Windows.Forms.Button();
+            this.buttonConnectSerial = new System.Windows.Forms.Button();
+            this.buttonDisconnect = new System.Windows.Forms.Button();
+            this.buttonConnectUsb = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // lblSampleSize
             // 
             this.lblSampleSize.AutoSize = true;
-            this.lblSampleSize.Location = new System.Drawing.Point(24, 29);
-            this.lblSampleSize.Margin = new System.Windows.Forms.Padding(6, 0, 6, 0);
+            this.lblSampleSize.Location = new System.Drawing.Point(12, 52);
             this.lblSampleSize.Name = "lblSampleSize";
-            this.lblSampleSize.Size = new System.Drawing.Size(138, 25);
+            this.lblSampleSize.Size = new System.Drawing.Size(68, 13);
             this.lblSampleSize.TabIndex = 0;
             this.lblSampleSize.Text = "Sample Size:";
             // 
             // txtSampleSize
             // 
-            this.txtSampleSize.Location = new System.Drawing.Point(172, 23);
-            this.txtSampleSize.Margin = new System.Windows.Forms.Padding(6);
+            this.txtSampleSize.Location = new System.Drawing.Point(96, 49);
             this.txtSampleSize.MaxLength = 6;
             this.txtSampleSize.Name = "txtSampleSize";
-            this.txtSampleSize.Size = new System.Drawing.Size(160, 31);
+            this.txtSampleSize.Size = new System.Drawing.Size(82, 20);
             this.txtSampleSize.TabIndex = 1;
+            this.txtSampleSize.Text = "1000";
+            this.txtSampleSize.TextChanged += new System.EventHandler(this.txtSampleSize_TextChanged);
             // 
             // btnGet
             // 
-            this.btnGet.Location = new System.Drawing.Point(410, 23);
-            this.btnGet.Margin = new System.Windows.Forms.Padding(6);
+            this.btnGet.Location = new System.Drawing.Point(332, 47);
             this.btnGet.Name = "btnGet";
-            this.btnGet.Size = new System.Drawing.Size(150, 44);
+            this.btnGet.Size = new System.Drawing.Size(75, 23);
             this.btnGet.TabIndex = 2;
             this.btnGet.Text = "DS:Get?";
             this.btnGet.UseVisualStyleBackColor = true;
@@ -77,21 +82,19 @@ namespace DataStoreSample
             // lblResponse
             // 
             this.lblResponse.AutoSize = true;
-            this.lblResponse.Location = new System.Drawing.Point(24, 83);
-            this.lblResponse.Margin = new System.Windows.Forms.Padding(6, 0, 6, 0);
+            this.lblResponse.Location = new System.Drawing.Point(12, 104);
             this.lblResponse.Name = "lblResponse";
-            this.lblResponse.Size = new System.Drawing.Size(115, 25);
+            this.lblResponse.Size = new System.Drawing.Size(58, 13);
             this.lblResponse.TabIndex = 3;
             this.lblResponse.Text = "Response:";
             // 
             // rtbResponse
             // 
             this.rtbResponse.BackColor = System.Drawing.SystemColors.Control;
-            this.rtbResponse.Location = new System.Drawing.Point(172, 83);
-            this.rtbResponse.Margin = new System.Windows.Forms.Padding(6);
+            this.rtbResponse.Location = new System.Drawing.Point(86, 104);
             this.rtbResponse.Name = "rtbResponse";
             this.rtbResponse.ReadOnly = true;
-            this.rtbResponse.Size = new System.Drawing.Size(664, 422);
+            this.rtbResponse.Size = new System.Drawing.Size(334, 273);
             this.rtbResponse.TabIndex = 8;
             this.rtbResponse.TabStop = false;
             this.rtbResponse.Text = "";
@@ -99,30 +102,27 @@ namespace DataStoreSample
             // lblTime
             // 
             this.lblTime.AutoSize = true;
-            this.lblTime.Location = new System.Drawing.Point(24, 530);
-            this.lblTime.Margin = new System.Windows.Forms.Padding(6, 0, 6, 0);
+            this.lblTime.Location = new System.Drawing.Point(7, 398);
             this.lblTime.Name = "lblTime";
-            this.lblTime.Size = new System.Drawing.Size(65, 25);
+            this.lblTime.Size = new System.Drawing.Size(33, 13);
             this.lblTime.TabIndex = 9;
             this.lblTime.Text = "Time:";
             // 
             // txtTime
             // 
             this.txtTime.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.txtTime.Location = new System.Drawing.Point(172, 528);
-            this.txtTime.Margin = new System.Windows.Forms.Padding(6);
+            this.txtTime.Location = new System.Drawing.Point(86, 397);
             this.txtTime.Name = "txtTime";
             this.txtTime.ReadOnly = true;
-            this.txtTime.Size = new System.Drawing.Size(664, 31);
+            this.txtTime.Size = new System.Drawing.Size(334, 20);
             this.txtTime.TabIndex = 16;
             this.txtTime.TabStop = false;
             // 
             // buttonContinuous
             // 
-            this.buttonContinuous.Location = new System.Drawing.Point(867, 23);
-            this.buttonContinuous.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonContinuous.Location = new System.Drawing.Point(434, 12);
             this.buttonContinuous.Name = "buttonContinuous";
-            this.buttonContinuous.Size = new System.Drawing.Size(150, 44);
+            this.buttonContinuous.Size = new System.Drawing.Size(75, 23);
             this.buttonContinuous.TabIndex = 17;
             this.buttonContinuous.Text = "Continuous DS";
             this.buttonContinuous.UseVisualStyleBackColor = true;
@@ -131,10 +131,9 @@ namespace DataStoreSample
             // buttonAbort
             // 
             this.buttonAbort.Enabled = false;
-            this.buttonAbort.Location = new System.Drawing.Point(867, 515);
-            this.buttonAbort.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonAbort.Location = new System.Drawing.Point(434, 268);
             this.buttonAbort.Name = "buttonAbort";
-            this.buttonAbort.Size = new System.Drawing.Size(150, 44);
+            this.buttonAbort.Size = new System.Drawing.Size(75, 23);
             this.buttonAbort.TabIndex = 18;
             this.buttonAbort.Text = "Abort";
             this.buttonAbort.UseVisualStyleBackColor = true;
@@ -142,10 +141,9 @@ namespace DataStoreSample
             // 
             // buttonTriggeredSoftkey
             // 
-            this.buttonTriggeredSoftkey.Location = new System.Drawing.Point(867, 85);
-            this.buttonTriggeredSoftkey.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonTriggeredSoftkey.Location = new System.Drawing.Point(434, 44);
             this.buttonTriggeredSoftkey.Name = "buttonTriggeredSoftkey";
-            this.buttonTriggeredSoftkey.Size = new System.Drawing.Size(150, 71);
+            this.buttonTriggeredSoftkey.Size = new System.Drawing.Size(75, 37);
             this.buttonTriggeredSoftkey.TabIndex = 19;
             this.buttonTriggeredSoftkey.Text = "Softkey Trigger";
             this.buttonTriggeredSoftkey.UseVisualStyleBackColor = true;
@@ -153,10 +151,9 @@ namespace DataStoreSample
             // 
             // buttonTriggerTtlDuration
             // 
-            this.buttonTriggerTtlDuration.Location = new System.Drawing.Point(867, 251);
-            this.buttonTriggerTtlDuration.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonTriggerTtlDuration.Location = new System.Drawing.Point(434, 131);
             this.buttonTriggerTtlDuration.Name = "buttonTriggerTtlDuration";
-            this.buttonTriggerTtlDuration.Size = new System.Drawing.Size(150, 71);
+            this.buttonTriggerTtlDuration.Size = new System.Drawing.Size(75, 37);
             this.buttonTriggerTtlDuration.TabIndex = 20;
             this.buttonTriggerTtlDuration.Text = "TTL Trigger (duration)";
             this.buttonTriggerTtlDuration.UseVisualStyleBackColor = true;
@@ -164,22 +161,20 @@ namespace DataStoreSample
             // 
             // buttonTriggerCommand
             // 
-            this.buttonTriggerCommand.Location = new System.Drawing.Point(867, 168);
-            this.buttonTriggerCommand.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonTriggerCommand.Location = new System.Drawing.Point(434, 87);
             this.buttonTriggerCommand.Name = "buttonTriggerCommand";
-            this.buttonTriggerCommand.Size = new System.Drawing.Size(150, 71);
+            this.buttonTriggerCommand.Size = new System.Drawing.Size(75, 37);
             this.buttonTriggerCommand.TabIndex = 21;
             this.buttonTriggerCommand.Text = "SCPI Trigger";
             this.buttonTriggerCommand.UseVisualStyleBackColor = true;
-            this.buttonTriggerCommand.Click += new System.EventHandler(this.buttonTriggerCommand_Click);
+            this.buttonTriggerCommand.Click += new System.EventHandler(this.buttonSCPITriggerCommand_Click);
             // 
             // buttonSendScpiTrigger
             // 
             this.buttonSendScpiTrigger.Enabled = false;
-            this.buttonSendScpiTrigger.Location = new System.Drawing.Point(867, 423);
-            this.buttonSendScpiTrigger.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonSendScpiTrigger.Location = new System.Drawing.Point(434, 220);
             this.buttonSendScpiTrigger.Name = "buttonSendScpiTrigger";
-            this.buttonSendScpiTrigger.Size = new System.Drawing.Size(150, 71);
+            this.buttonSendScpiTrigger.Size = new System.Drawing.Size(75, 37);
             this.buttonSendScpiTrigger.TabIndex = 22;
             this.buttonSendScpiTrigger.Text = "Send Scpi Trigger";
             this.buttonSendScpiTrigger.UseVisualStyleBackColor = true;
@@ -187,20 +182,85 @@ namespace DataStoreSample
             // 
             // buttonTtlTriggerEdge2Edge
             // 
-            this.buttonTtlTriggerEdge2Edge.Location = new System.Drawing.Point(867, 334);
-            this.buttonTtlTriggerEdge2Edge.Margin = new System.Windows.Forms.Padding(6);
+            this.buttonTtlTriggerEdge2Edge.Location = new System.Drawing.Point(434, 174);
             this.buttonTtlTriggerEdge2Edge.Name = "buttonTtlTriggerEdge2Edge";
-            this.buttonTtlTriggerEdge2Edge.Size = new System.Drawing.Size(150, 71);
+            this.buttonTtlTriggerEdge2Edge.Size = new System.Drawing.Size(75, 37);
             this.buttonTtlTriggerEdge2Edge.TabIndex = 23;
             this.buttonTtlTriggerEdge2Edge.Text = "TTL Trigger (edge-edge)";
             this.buttonTtlTriggerEdge2Edge.UseVisualStyleBackColor = true;
             this.buttonTtlTriggerEdge2Edge.Click += new System.EventHandler(this.buttonTtlTriggerEdge2Edge_Click);
             // 
+            // textBoxInterval
+            // 
+            this.textBoxInterval.Location = new System.Drawing.Point(96, 71);
+            this.textBoxInterval.MaxLength = 6;
+            this.textBoxInterval.Name = "textBoxInterval";
+            this.textBoxInterval.Size = new System.Drawing.Size(82, 20);
+            this.textBoxInterval.TabIndex = 25;
+            this.textBoxInterval.Text = "10";
+            this.textBoxInterval.TextChanged += new System.EventHandler(this.textBoxInterval_TextChanged);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(12, 75);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(45, 13);
+            this.label1.TabIndex = 24;
+            this.label1.Text = "Interval:";
+            // 
+            // buttonSaveLog
+            // 
+            this.buttonSaveLog.Enabled = false;
+            this.buttonSaveLog.Location = new System.Drawing.Point(443, 354);
+            this.buttonSaveLog.Name = "buttonSaveLog";
+            this.buttonSaveLog.Size = new System.Drawing.Size(75, 23);
+            this.buttonSaveLog.TabIndex = 26;
+            this.buttonSaveLog.Text = "Save Log";
+            this.buttonSaveLog.UseVisualStyleBackColor = true;
+            this.buttonSaveLog.Click += new System.EventHandler(this.buttonSaveLog_Click);
+            // 
+            // buttonConnectSerial
+            // 
+            this.buttonConnectSerial.Location = new System.Drawing.Point(115, 12);
+            this.buttonConnectSerial.Name = "buttonConnectSerial";
+            this.buttonConnectSerial.Size = new System.Drawing.Size(90, 23);
+            this.buttonConnectSerial.TabIndex = 29;
+            this.buttonConnectSerial.Text = "&Connect Serial";
+            this.buttonConnectSerial.UseVisualStyleBackColor = true;
+            this.buttonConnectSerial.Click += new System.EventHandler(this.buttonConnectSerial_Click);
+            // 
+            // buttonDisconnect
+            // 
+            this.buttonDisconnect.Location = new System.Drawing.Point(211, 12);
+            this.buttonDisconnect.Name = "buttonDisconnect";
+            this.buttonDisconnect.Size = new System.Drawing.Size(90, 23);
+            this.buttonDisconnect.TabIndex = 28;
+            this.buttonDisconnect.Text = "&Disconnect";
+            this.buttonDisconnect.UseVisualStyleBackColor = true;
+            this.buttonDisconnect.Click += new System.EventHandler(this.buttonDisconnect_Click);
+            // 
+            // buttonConnectUsb
+            // 
+            this.buttonConnectUsb.Location = new System.Drawing.Point(19, 12);
+            this.buttonConnectUsb.Name = "buttonConnectUsb";
+            this.buttonConnectUsb.Size = new System.Drawing.Size(90, 23);
+            this.buttonConnectUsb.TabIndex = 27;
+            this.buttonConnectUsb.Text = "&Connect USB";
+            this.buttonConnectUsb.UseVisualStyleBackColor = true;
+            this.buttonConnectUsb.Click += new System.EventHandler(this.buttonConnectUsb_Click);
+            // 
             // DataStoreForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1061, 574);
+            this.ClientSize = new System.Drawing.Size(530, 421);
+            this.Controls.Add(this.buttonConnectSerial);
+            this.Controls.Add(this.buttonDisconnect);
+            this.Controls.Add(this.buttonConnectUsb);
+            this.Controls.Add(this.buttonSaveLog);
+            this.Controls.Add(this.textBoxInterval);
+            this.Controls.Add(this.label1);
             this.Controls.Add(this.buttonTtlTriggerEdge2Edge);
             this.Controls.Add(this.buttonSendScpiTrigger);
             this.Controls.Add(this.buttonTriggerCommand);
@@ -216,7 +276,6 @@ namespace DataStoreSample
             this.Controls.Add(this.txtSampleSize);
             this.Controls.Add(this.lblSampleSize);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.Margin = new System.Windows.Forms.Padding(6);
             this.MaximizeBox = false;
             this.Name = "DataStoreForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
@@ -243,6 +302,12 @@ namespace DataStoreSample
         private System.Windows.Forms.Button buttonTriggerCommand;
         private System.Windows.Forms.Button buttonSendScpiTrigger;
         private System.Windows.Forms.Button buttonTtlTriggerEdge2Edge;
+        private System.Windows.Forms.TextBox textBoxInterval;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button buttonSaveLog;
+        private System.Windows.Forms.Button buttonConnectSerial;
+        private System.Windows.Forms.Button buttonDisconnect;
+        private System.Windows.Forms.Button buttonConnectUsb;
     }
 }
 

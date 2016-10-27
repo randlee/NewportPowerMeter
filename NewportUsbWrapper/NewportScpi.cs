@@ -48,12 +48,36 @@ namespace Newport.Usb
         TriggerStateCommand = 3
     }
 
+    public enum AnalogFilter
+    {
+        /// <summary>
+        /// None
+        /// </summary>
+        None = 0,
+        /// <summary>
+        /// 250kHz
+        /// </summary>
+        F250kHz = 1,
+        /// <summary>
+        /// 12.5kHz
+        /// </summary>
+        F12_5kHz = 2,
+        /// <summary>
+        /// 1kHz
+        /// </summary>
+        F1kHz = 3,
+        /// <summary>
+        /// 5Hz
+        /// </summary>
+        F5Hz = 4
+    }
+
     public static class NewportScpi
     {
-        public static string Identity => "*IDN?";
-        public static string Reset => "*RST";
+        public static string Identity => "*IDN?\r";
+        public static string Reset => "*RST\r";
 
-        public static string AutoRange(bool enable) => $"PM:AUTO {(enable ? 1 : 0)}";
+        public static string AutoRange(bool enable) => $"PM:AUTO {(enable ? 1 : 0)}\r";
         public static string Mode(CaptureMode mode) => $"PM:MODE {(int) mode}\r";
 
         #region DataStore
@@ -96,26 +120,26 @@ namespace Newport.Usb
 
         #region Trigger
 
-        public static string TriggerExternalEnable(uint channel=0) {  return channel == 0 ? $"PM:TRIG:EXT 1" : $"PM:TRIG:EXT 2"; }
+        public static string TriggerExternalEnable(uint channel=0) {  return channel == 0 ? $"PM:TRIG:EXT 1\r" : $"PM:TRIG:EXT 2\r"; }
 
-        public static string TriggerExternalDisable => $"PM:TRIG:EXT 0";
+        public static string TriggerExternalDisable => $"PM:TRIG:EXT 0\r";
 
         /// <summary>
         /// External trigger edge query
         /// </summary>
-        public static string TriggerEdgeQuery => "PM:TRIG:EDGE?";
+        public static string TriggerEdgeQuery => "PM:TRIG:EDGE?\r";
 
         /// <summary>
         /// This command defines whether the external trigger input on the back panel is falling edge or rising edge active.
         /// </summary>
         /// <param name="risingEdge">true indicates rising edge triggered, false indicates falling edge triggered</param>
         /// <returns></returns>
-        public static string TriggerEdge(bool risingEdge) { return risingEdge ? "PM:TRIG:EDGE 1" : "PM:TRIG:EDGE 0"; }
+        public static string TriggerEdge(bool risingEdge) { return risingEdge ? "PM:TRIG:EDGE 1\r" : "PM:TRIG:EDGE 0\r"; }
 
         /// <summary>
         /// External Trigger Holdoff Time Query
         /// </summary>
-        public static string TriggerHoldoffQuery => "PM:TRIG:HOLD?";
+        public static string TriggerHoldoffQuery => "PM:TRIG:HOLD?\r";
 
         /// <summary>
         /// External Trigger Holdoff Time Command.  Holdoff time is the delay in milliseconds for the trigger to take effect
@@ -123,55 +147,55 @@ namespace Newport.Usb
         /// <param name="timeMs">The parameter @time is of type integer in the range 0 to 1000. 
         /// @time is the delay in milliseconds for the trigger to take effect. </param>
         /// <returns></returns>
-        public static string TriggerHoldoff(uint timeMs) => $"PM:TRIG:HOLD {timeMs}";
+        public static string TriggerHoldoff(uint timeMs) => $"PM:TRIG:HOLD {timeMs}\r";
 
         /// <summary>
         /// Returns the current start event setting
         /// </summary>
-        public static string TriggerStartEventQuery => "PM:TRIG:START?";
+        public static string TriggerStartEventQuery => "PM:TRIG:START?\r";
 
         /// <summary>
         /// This command sets the optional start event.
         /// </summary>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static string TriggerStartEvent(TriggerStartEvent option) => $"PM:TRIG:START {(int)option}";
+        public static string TriggerStartEvent(TriggerStartEvent option) => $"PM:TRIG:START {(int)option}\r";
 
         /// <summary>
         /// Returns the current trigger stop event setting (TriggerOption)
         /// </summary>
-        public static string TriggerStopEventQuery => "PM:TRIG:STOP?";
+        public static string TriggerStopEventQuery => "PM:TRIG:STOP?\r";
 
         /// <summary>
         /// This command sets the optional stop event.
         /// </summary>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static string TriggerStopEvent(TriggerStopEvent option) => $"PM:TRIG:STOP {(int)option}";
+        public static string TriggerStopEvent(TriggerStopEvent option) => $"PM:TRIG:STOP {(int)option}\r";
 
 
         /// <summary>
         /// This command queries the trigger state.  0=armed, 1=triggered
         /// </summary>
         /// <returns></returns>
-        public static string TriggerStateQuery => "PM:TRIG:STATE?";
+        public static string TriggerStateQuery => "PM:TRIG:STATE?\r";
 
         /// <summary>
         /// PM:TRIG:STATE 0
         /// This command sets the trigger state to 'armed'
         /// </summary>
-        public static string TriggerStateArm => "PM:TRIG:STATE 0";
+        public static string TriggerStateArm => "PM:TRIG:STATE 0\r";
 
         /// <summary>
         /// PM:TRIG:STATE 1
         /// This command sets the trigger state to 'triggered'
         /// </summary>
-        public static string TriggerStateTriggered => "PM:TRIG:STATE 1";
+        public static string TriggerStateTriggered => "PM:TRIG:STATE 1\r";
         /// <summary>
         /// This command returns the measurement level that indicates a trigger stop condition.
         /// </summary>
         /// <returns></returns>
-        public static string TriggerValueQuery => "PM:TRIG:VALUE?";
+        public static string TriggerValueQuery => "PM:TRIG:VALUE?\r";
 
         /// <summary>
         /// This command sets the measurement level that indicates a trigger stop condition. 
@@ -180,12 +204,12 @@ namespace Newport.Usb
         /// </summary>
         /// <param name="value">Measurement level that indicates a trigger stop condition. </param>
         /// <returns></returns>
-        public static string TriggerValue(float value) => $"PM:TRIG:VALUE {value}";
+        public static string TriggerValue(float value) => $"PM:TRIG:VALUE {value}\r";
 
         /// <summary>
         /// This command returns the time duration that indicates a trigger stop condition.
         /// </summary>
-        public static string TriggerTimeQuery => "PM:TRIG:TIME?";
+        public static string TriggerTimeQuery => "PM:TRIG:TIME?\r";
 
         /// <summary>
         /// This command sets the time duration, in ms, that indicates a trigger stop condition. 
@@ -194,7 +218,26 @@ namespace Newport.Usb
         /// </summary>
         /// <param name="timeMs">Sample time after trigger</param>
         /// <returns></returns>
-        public static string TriggerTimeMs(uint timeMs) => $"PM:TRIG:TIME {timeMs}";
+        public static string TriggerTimeMs(uint timeMs) => $"PM:TRIG:TIME {timeMs}\r";
         #endregion Trigger
+
+        #region Filters
+        public static string DigitalFilter(uint val) => $"PM:DIGITALFILTER {val}\r";
+
+        public static string DigitalFilterQuery => "PM:DIGITALFILTER?\r";
+
+        public static string AnalogFilter(uint val) => $"PM:ANALOGFILTER {val}\r";
+
+        public static string AnalogFilterQuery => "PM:ANALOGLFILTER?\r";
+        #endregion
+
+        public static string Echo(bool on) => $"ECHO {(@on ? 1 : 0)}\r";
+        public static string EchoQuery => $"ECHO?\r";
+        #region Error Codes
+
+        public static string ErrorString => "ERRSTR?\r";
+        public static string Error => "ERR?\r";
+
+        #endregion
     }
 }

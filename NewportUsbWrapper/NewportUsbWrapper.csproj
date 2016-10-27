@@ -71,7 +71,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="UsbDllWrap">
       <HintPath>.\UsbDllWrap.dll</HintPath>
@@ -79,11 +78,26 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CaptureMode.cs" />
+    <Compile Include="INewportDll.cs" />
+    <Compile Include="INewportInstrument.cs" />
+    <Compile Include="NewportDllDecompiled.cs" />
+    <Compile Include="NewportDllMock.cs" />
+    <Compile Include="NewportPowerMeter.cs" />
+    <Compile Include="NewportSerialPowerMeter.cs" />
+    <Compile Include="NewportSerialWrap.cs" />
+    <Compile Include="NewportDllWrap.cs" />
     <Compile Include="NewportMeasurementSettings.cs" />
     <Compile Include="NewportScpi.cs" />
     <Compile Include="NewportState.cs" />
     <Compile Include="NewportUsbPowerMeter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Util\FileUtil.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Visyn.Newport\Visyn.Newport.csproj">
+      <Project>{67f9d3a8-f71e-4428-913f-c37ae82cdb24}</Project>
+      <Name>Visyn.Newport</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

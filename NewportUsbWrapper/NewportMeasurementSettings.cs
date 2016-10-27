@@ -1,7 +1,10 @@
-﻿namespace Newport.Usb
+﻿using System;
+
+namespace Newport.Usb
 {
     public struct NewportMeasurementSettings
     {
+        public DateTime StartTime { get; private set; }
         public bool RisingEdge { get; }
         public uint Channel { get; }
         public double DurationSeconds { get; }
@@ -13,10 +16,13 @@
         public CaptureMode Mode { get; }
         public bool ResetInstrument { get; }
         public uint Samples { get; }
+
+        public double SamplePeriod { get; }
         
 
         public NewportMeasurementSettings(uint channel, TriggerStartEvent startEvent, TriggerStopEvent stopEvent, bool risingEdge,CaptureMode mode , double measurementDuration ,uint interval, double holdoff = 0, bool resetInstrument = false)
         {
+            StartTime = DateTime.Now;
             RisingEdge = risingEdge;
             Channel = channel;
             StartEvent = startEvent;
@@ -28,7 +34,10 @@
             Ringbuffer = false;
             ResetInstrument = resetInstrument;
             Samples = (uint) (DurationSeconds*10000.0/DatastoreInterval);
+            SamplePeriod = DatastoreInterval*0.0001;
         }
+
+        public void UpdateStateTime(DateTime time) { StartTime = time; }
 
         public static NewportMeasurementSettings ContiuousMeasurement(uint channel, uint interval, bool resetInstrument = false)
         {

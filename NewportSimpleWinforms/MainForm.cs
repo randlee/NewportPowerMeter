@@ -1,6 +1,8 @@
 using System;
+using System.Threading;
 using System.Windows.Forms;
 using Newport.Usb;
+using Visyn.Newport.Log;
 
 namespace Visyn.Newport
 {
@@ -9,7 +11,8 @@ namespace Visyn.Newport
     /// </summary>
     public partial class MainForm : Form
     {
-        private NewportUsbPowerMeter _powerMeter;
+        private INewportInstrument _powerMeter;
+
         /// <summary>
         /// Constructor.
         /// </summary>
@@ -17,7 +20,7 @@ namespace Visyn.Newport
         {
             InitializeComponent ();
             OnConnected (false);
-            _powerMeter = new NewportUsbPowerMeter();
+            _powerMeter = new NewportUsbPowerMeter(null);
         }
 
         /// <summary>
@@ -26,7 +29,8 @@ namespace Visyn.Newport
         /// <param name="isConnected">True if connected, false if disconnected.</param>
         private void OnConnected (bool isConnected)
         {
-            btnConnect.Enabled = !isConnected;
+            btnConnectUsb.Enabled = !isConnected;
+            buttonConnectSerial.Enabled = !isConnected;
             btnDisconnect.Enabled = isConnected;
             txtCmd.Enabled = isConnected;
             btnSend.Enabled = isConnected;
@@ -42,16 +46,22 @@ namespace Visyn.Newport
         {
             try
             {
+                if(_powerMeter != null) OnDisconnect(this, null);
+                var meter = new NewportDllWrap(ComLogger);
+                _powerMeter = meter;
                 // Open all devices on the USB bus
-                var connected = _powerMeter.Connect();
+                var connected = meter.OpenDevices();
 
                 OnConnected(connected);
                 if (connected)
                 {
                     txtCmd.Focus();
                     txtCmd.Text = NewportScpi.Identity;
-                    OnSend(this,null);
-                    OnRead(this,null);
+                    OnQuery(this,null);
+                }
+                else
+                {
+                    rtbResponse.Text = "Connection failed";
                 }
             }
             catch (Exception ex)
@@ -60,6 +70,37 @@ namespace Visyn.Newport
             }
         }
 
+        private CommLogger ComLogger { get; } = new CommLogger();
+
+        private void buttonConnectSerial_Click(object sender, EventArgs e)
+        {
+            connect(new NewportSerialPowerMeter(new NewportSerialWrap(ComLogger))); 
+        }
+
+        private void connect(INewportInstrument meter)
+        {
+            try
+            {
+                if (_powerMeter != null) OnDisconnect(this, null);
+                _powerMeter = meter;
+                // Open all devices on the USB bus
+                var connected = meter.OpenDevices();
+
+                OnConnected(connected);
+                if (connected)
+                {
+                    txtCmd.Focus();
+                    txtCmd.Text = NewportScpi.Identity;
+                    OnSend(this, null);
+                    OnRead(this, null);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Display the exception message
+                MessageBox.Show($"Could not connect.\r\n{ex.Message}", "Connect", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
         /// <summary>
         /// This method disconnects the devices attached via USB cable.
@@ -71,7 +112,8 @@ namespace Visyn.Newport
             try
             {
                 OnConnected(false);
-                _powerMeter?.Disconnect();
+                _powerMeter?.CloseDevices();
+                _powerMeter = null;
             }
             catch (Exception ex)
             {   // Display the exception message
@@ -82,12 +124,19 @@ namespace Visyn.Newport
 
         private void OnRead(object sender, EventArgs e)
         {
-            rtbResponse.Text = _powerMeter.Read();
+            rtbResponse.Text += $": {_powerMeter.Read()}\r\n";
         }
 
         private void OnSend(object sender, EventArgs e)
         {
-            rtbResponse.Text = _powerMeter.Write(txtCmd.Text);
+            if(_powerMeter.Write(txtCmd.Text + '\r') == 0) rtbResponse.Text = txtCmd.Text;
+        }
+
+        private void OnQuery(object sender, EventArgs e)
+        {
+            OnSend(this,e);
+            Thread.Sleep(250);
+            OnRead(this,e);
         }
     }
 }
